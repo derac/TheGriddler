@@ -22,18 +22,24 @@ public partial class MainWindow : Window
     {
         InitializeComponent();
         _settings = Settings.Load();
+        
+        // Sync Monitors
+        foreach (var screen in System.Windows.Forms.Screen.AllScreens)
+        {
+            var existing = _settings.MonitorConfigs.Find(m => m.DeviceName == screen.DeviceName);
+            if (existing == null)
+            {
+                _settings.MonitorConfigs.Add(new MonitorConfig
+                {
+                    DeviceName = screen.DeviceName,
+                    Rows = 2,
+                    Columns = 2
+                });
+            }
+        }
+
         this.DataContext = _settings;
     }
 
-    private void SaveButton_Click(object sender, RoutedEventArgs e)
-    {
-        _settings.Save();
-        this.Close();
-    }
 
-    private void LoadButton_Click(object sender, RoutedEventArgs e)
-    {
-        _settings = Settings.Load();
-        this.DataContext = _settings;
-    }
 }

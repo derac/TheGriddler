@@ -9,113 +9,73 @@
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
-        <TabControl Background="White" Margin="5">
-            <TabItem Header="Settings">
-                <Grid Margin="10">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="*" />
-                    </Grid.ColumnDefinitions>
-                    
-                    <StackPanel Grid.Column="0" Margin="0,0,5,0">
-                        <GroupBox Header="App">
-                            <StackPanel Margin="5">
-                                <TextBlock Text="General" FontStyle="Italic" Margin="0,0,0,5"/>
-                                <CheckBox Name="ShowSplashScreenCheck" Content="Show Splash Screen" IsChecked="{Binding ShowSplashScreen}" Margin="0,2"/>
-                                <Separator Margin="0,5"/>
-                                <TextBlock Text="Updates" FontStyle="Italic" Margin="0,0,0,2"/>
-                                <CheckBox Content="At Startup" Margin="0,2"/>
-                                <CheckBox Content="Silent" Margin="0,2"/>
-                            </StackPanel>
-                        </GroupBox>
+        <Grid Margin="10">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
 
-                        <GroupBox Header="Grid" Margin="0,10,0,0">
-                            <StackPanel Margin="5">
-                                <TextBlock Text="Dimensions" FontStyle="Italic" Margin="0,0,0,2"/>
-                                <Grid>
+            <!-- Column 0: Monitor Configuration -->
+            <GroupBox Grid.Column="0" Header="Monitors" Margin="0,0,5,0">
+                <DockPanel>
+                    <TextBlock DockPanel.Dock="Top" Text="Configure grid dimensions for each monitor." FontStyle="Italic" Margin="5"/>
+                    <ListBox ItemsSource="{Binding MonitorConfigs}" HorizontalContentAlignment="Stretch" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <Grid Margin="0,5">
                                     <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*" />
-                                        <ColumnDefinition Width="Auto" />
-                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
                                     </Grid.ColumnDefinitions>
-                                    <TextBox Name="GridWidthText" Text="{Binding GridWidth, UpdateSourceTrigger=PropertyChanged}" Grid.Column="0" TextAlignment="Center"/>
-                                    <TextBlock Text=" x " Grid.Column="1" VerticalAlignment="Center" Margin="5,0"/>
-                                    <TextBox Name="GridHeightText" Text="{Binding GridHeight, UpdateSourceTrigger=PropertyChanged}" Grid.Column="2" TextAlignment="Center"/>
+                                    <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding DeviceName}" FontWeight="Bold" TextWrapping="Wrap"/>
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                                        <TextBlock Text="Cols:" VerticalAlignment="Center" Margin="5,0"/>
+                                        <TextBox Text="{Binding Columns, UpdateSourceTrigger=PropertyChanged}" Width="30" TextAlignment="Center"/>
+                                        <TextBlock Text="Rows:" VerticalAlignment="Center" Margin="5,0"/>
+                                        <TextBox Text="{Binding Rows, UpdateSourceTrigger=PropertyChanged}" Width="30" TextAlignment="Center"/>
+                                    </StackPanel>
                                 </Grid>
-                                
-                                <TextBlock Text="Graphics" FontStyle="Italic" Margin="0,10,0,2"/>
-                                <DockPanel LastChildFill="True" Margin="0,2">
-                                    <TextBlock Text="Blur Radius" Width="100"/>
-                                    <TextBox Text="{Binding BlurRadius}" Width="50" DockPanel.Dock="Right" TextAlignment="Center"/>
-                                    <Slider Name="BlurRadiusSlider" Minimum="0" Maximum="20" Value="{Binding BlurRadius}" Margin="5,0"/>
-                                </DockPanel>
-                                <DockPanel LastChildFill="True" Margin="0,2">
-                                    <TextBlock Text="Opacity" Width="100"/>
-                                    <TextBox Text="{Binding Opacity}" Width="50" DockPanel.Dock="Right" TextAlignment="Center"/>
-                                    <Slider Name="OpacitySlider" Minimum="0" Maximum="1" Value="{Binding Opacity}" Margin="5,0"/>
-                                </DockPanel>
-                                <CheckBox Content="Fill Window" IsChecked="{Binding FillWindow}" Margin="0,2"/>
-                                <CheckBox Content="Radial Gradient" IsChecked="{Binding RadialGradient}" Margin="0,2"/>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </DockPanel>
+            </GroupBox>
 
-                                <TextBlock Text="Theme" FontStyle="Italic" Margin="0,10,0,2"/>
-                                <DockPanel>
-                                    <TextBlock Text="Current Theme" Margin="0,0,10,0" VerticalAlignment="Center"/>
-                                    <ComboBox Name="ThemeCombo" SelectedValue="{Binding Theme}">
-                                        <ComboBoxItem Content="default"/>
-                                    </ComboBox>
-                                </DockPanel>
-                            </StackPanel>
-                        </GroupBox>
+            <!-- Column 1: Info and Bindings -->
+            <StackPanel Grid.Column="1" Margin="5,0,0,0">
+                <GroupBox Header="App" Margin="0,0,0,10">
+                    <StackPanel Margin="5">
+                        <CheckBox Content="Run on Startup" IsChecked="{Binding RunOnStartup}" Margin="0,2"/>
                     </StackPanel>
+                </GroupBox>
 
-                    <StackPanel Grid.Column="1" Margin="5,0,0,0">
-                        <GroupBox Header="Input">
-                            <StackPanel Margin="5">
-                                <TextBlock Text="Bindings" FontStyle="Italic" Margin="0,0,0,2"/>
-                                <DataGrid ItemsSource="{Binding Bindings}" AutoGenerateColumns="False" IsReadOnly="True" Height="250" Background="White">
-                                    <DataGrid.Columns>
-                                        <DataGridTextColumn Header="Key" Width="*" Binding="{Binding Key}"/>
-                                        <DataGridTextColumn Header="Command" Width="*" Binding="{Binding Command}"/>
-                                    </DataGrid.Columns>
-                                </DataGrid>
-                            </StackPanel>
-                        </GroupBox>
+                <GroupBox Header="Input Bindings">
+                    <DataGrid ItemsSource="{Binding Bindings}" AutoGenerateColumns="False" IsReadOnly="True" Height="150" Background="White">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="Key" Width="*" Binding="{Binding Key}"/>
+                            <DataGridTextColumn Header="Command" Width="*" Binding="{Binding Command}"/>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </GroupBox>
 
-                        <GroupBox Header="OS" Margin="0,10,0,0">
-                            <StackPanel Margin="5">
-                                <TextBlock Text="Recommended" FontStyle="Italic" Margin="0,0,0,2"/>
-                                <CheckBox Content="Disable Aero Shake" Margin="0,2"/>
-                                <CheckBox Content="Show Dragged Window Contents" IsChecked="True" Margin="0,2"/>
-                            </StackPanel>
-                        </GroupBox>
+                <GroupBox Header="Controls" Margin="0,10,0,0">
+                    <TextBlock TextWrapping="Wrap" Margin="5">
+                        Drag a window, then press a bound key (Space/Right-Click) to activate the grid.
+                    </TextBlock>
+                </GroupBox>
+
+                <GroupBox Header="About" Margin="0,10,0,0">
+                    <StackPanel Margin="5">
+                        <TextBlock Text="WindowGrid Redux" FontWeight="Bold"/>
+                        <TextBlock Text="Credits:" Margin="0,5,0,0" FontWeight="SemiBold"/>
+                        <TextBlock Text="Derek Olson"/>
+                        <TextBlock Text="Joshua Wilding (Original Creator)"/>
                     </StackPanel>
-                </Grid>
-            </TabItem>
-            
-            <TabItem Header="Info">
-                <Grid Margin="10">
-                    <StackPanel>
-                        <GroupBox Header="About">
-                            <StackPanel Margin="5">
-                                <TextBlock Text="WindowGrid Redux" FontWeight="Bold"/>
-                                <TextBlock Text="A minimalist window management tool." Margin="0,5"/>
-                                <TextBlock Text="Original Creator: Joshua Wilding"/>
-                                <TextBlock Text="Redux Version: 1.0.0.0"/>
-                            </StackPanel>
-                        </GroupBox>
-                        <GroupBox Header="Controls" Margin="0,10,0,0">
-                            <TextBlock TextWrapping="Wrap" Margin="5">
-                                Drag a window, then press a bound key (Space/Right-Click) to activate the grid.
-                            </TextBlock>
-                        </GroupBox>
-                    </StackPanel>
-                </Grid>
-            </TabItem>
-        </TabControl>
+                </GroupBox>
+            </StackPanel>
+        </Grid>
 
-        <UniformGrid Grid.Row="1" Columns="2" Margin="5,0,5,5">
-            <Button Content="Save" Margin="0,0,2,0" Padding="10,5" Click="SaveButton_Click"/>
-            <Button Content="Load" Margin="2,0,0,0" Padding="10,5" Click="LoadButton_Click"/>
-        </UniformGrid>
     </Grid>
 </Window>

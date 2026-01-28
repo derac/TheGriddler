@@ -12,6 +12,7 @@ namespace WindowGridRedux
         private IntPtr _targetHWnd;
         private bool _isDragging;
         private bool _isLButtonDown;
+        private bool _suppressRightUp;
 
         public MainController()
         {
@@ -47,29 +48,50 @@ namespace WindowGridRedux
             }
         }
 
-        private void OnRightButtonDown(bool down)
+        private bool HandleRightClick()
+        {
+            if (_isLButtonDown && !_isDragging)
+            {
+                ActivateGrid();
+                return true;
+            }
+            else if (_isDragging && _overlay != null)
+            {
+                if (!_overlay.IsSelecting)
+                {
+                    // Start selection at current mouse position
+                    var cursorPosition = System.Windows.Forms.Cursor.Position;
+                    _overlay.StartSelection(new System.Windows.Point(cursorPosition.X, cursorPosition.Y));
+                }
+                else
+                {
+                    // Finish selection
+                    SnapAndClose();
+                }
+                return true;
+            }
+            return false;
+        }
+
+        private bool OnRightButtonDown(bool down)
         {
             if (down)
             {
-                if (_isLButtonDown && !_isDragging)
+                if (HandleRightClick())
                 {
-                    ActivateGrid();
-                }
-                else if (_isDragging && _overlay != null)
-                {
-                    if (!_overlay.IsSelecting)
-                    {
-                        // Start selection at current mouse position
-                        var cursorPosition = System.Windows.Forms.Cursor.Position;
-                        _overlay.StartSelection(new System.Windows.Point(cursorPosition.X, cursorPosition.Y));
-                    }
-                    else
-                    {
-                        // Finish selection
-                        SnapAndClose();
-                    }
+                    _suppressRightUp = true;
+                    return true;
                 }
             }
+            else
+            {
+                if (_suppressRightUp)
+                {
+                    _suppressRightUp = false;
+                    return true;
+                }
+            }
+            return false;
         }
 
         private void OnKeyDown(int vkCode)
@@ -77,7 +99,7 @@ namespace WindowGridRedux
             // Map Space/LControl to Right-Click logic
             if (vkCode == 32 || vkCode == 162)
             {
-                OnRightButtonDown(true);
+                HandleRightClick();
             }
         }
 
@@ -90,26 +112,30 @@ namespace WindowGridRedux
         {
             if (_isDragging) return;
 
-            _settings = Settings.Load();
-            var cursorPosition = System.Windows.Forms.Cursor.Position;
-            _targetHWnd = WindowManager.GetTargetWindow(new System.Drawing.Point(cursorPosition.X, cursorPosition.Y));
-
-            if (_targetHWnd != IntPtr.Zero)
+            // Offload the heavy work to ensure the Hook callback returns immediately
+            await System.Windows.Application.Current.Dispatcher.InvokeAsync(async () =>
             {
-                // Break the OS drag loop so we can take over
-                WindowManager.BreakDragLoop(_targetHWnd);
+                _settings = Settings.Load();
+                var cursorPosition = System.Windows.Forms.Cursor.Position;
+                _targetHWnd = WindowManager.GetTargetWindow(new System.Drawing.Point(cursorPosition.X, cursorPosition.Y));
 
-                // Ensure restored BEFORE waiting, to give it time to animate/update
-                WindowManager.EnsureRestored(_targetHWnd);
-                
-                _isDragging = true;
-                _overlay = new GridOverlay(_settings, _targetHWnd);
-                _overlay.Show();
-                
-                // Immediately start selection from the current cursor position
-                // so the first Right Click activates AND starts the span.
-                _overlay.StartSelection(new System.Windows.Point(cursorPosition.X, cursorPosition.Y));
-            }
+                if (_targetHWnd != IntPtr.Zero)
+                {
+                    // Break the OS drag loop so we can take over
+                    WindowManager.BreakDragLoop(_targetHWnd);
+
+                    // Ensure restored BEFORE waiting, to give it time to animate/update
+                    WindowManager.EnsureRestored(_targetHWnd);
+                    
+                    _isDragging = true;
+                    _overlay = new GridOverlay(_settings, _targetHWnd);
+                    _overlay.Show();
+                    
+                    // Immediately start selection from the current cursor position
+                    // so the first Right Click activates AND starts the span.
+                    _overlay.StartSelection(new System.Windows.Point(cursorPosition.X, cursorPosition.Y));
+                }
+            });
         }
 
         private void SnapAndClose()

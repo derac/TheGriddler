@@ -26,7 +26,7 @@ namespace WindowGridRedux
 
         public event Action<System.Drawing.Point>? MouseMoved;
         public event Action<bool>? LeftButtonDown;
-        public event Action<bool>? RightButtonDown;
+        public event Func<bool, bool>? RightButtonDown;
         public event Action<int>? KeyDown;
         public event Action<int>? KeyUp;
 
@@ -64,9 +64,29 @@ namespace WindowGridRedux
                     else if (wParam == (IntPtr)WM_LBUTTONUP)
                         LeftButtonDown?.Invoke(false);
                     else if (wParam == (IntPtr)WM_RBUTTONDOWN)
-                        RightButtonDown?.Invoke(true);
+                    {
+                        bool handled = false;
+                        if (RightButtonDown != null)
+                        {
+                            foreach (Func<bool, bool> handler in RightButtonDown.GetInvocationList())
+                            {
+                                if (handler(true)) handled = true;
+                            }
+                        }
+                        if (handled) return (IntPtr)1;
+                    }
                     else if (wParam == (IntPtr)WM_RBUTTONUP)
-                        RightButtonDown?.Invoke(false);
+                    {
+                        bool handled = false;
+                        if (RightButtonDown != null)
+                        {
+                            foreach (Func<bool, bool> handler in RightButtonDown.GetInvocationList())
+                            {
+                                if (handler(false)) handled = true;
+                            }
+                        }
+                        if (handled) return (IntPtr)1;
+                    }
                 }
             }
             return CallNextHookEx(_mouseHookId, nCode, wParam, lParam);

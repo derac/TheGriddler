@@ -16,6 +16,8 @@ namespace WindowGridRedux
         private System.Windows.Point? _endPos;
         private System.Drawing.Rectangle _physicalBounds;
         private WindowManager.WindowBorders _cachedBorders;
+        private int _rows;
+        private int _columns;
 
         public bool IsSelecting => _startPos.HasValue;
 
@@ -32,6 +34,19 @@ namespace WindowGridRedux
             var cursorPosition = System.Windows.Forms.Cursor.Position;
             var screen = System.Windows.Forms.Screen.FromPoint(cursorPosition);
             _physicalBounds = screen.WorkingArea;
+
+            // Resolve per-monitor dimensions
+            var monitorConfig = _settings.MonitorConfigs.Find(m => m.DeviceName == screen.DeviceName);
+            if (monitorConfig != null)
+            {
+                _rows = monitorConfig.Rows;
+                _columns = monitorConfig.Columns;
+            }
+            else
+            {
+                _rows = 2;
+                _columns = 3;
+            }
 
             // 1. Set basic properties so the window exists and is associated with the right monitor.
             // WPF's Window.Left/Top are in SYSTEM DIUs (logical units relative to primary monitor).
@@ -61,13 +76,13 @@ namespace WindowGridRedux
         private void SetupGrid()
         {
             var panel = (GridItems.ItemsPanel.LoadContent() as UniformGrid) ?? new UniformGrid();
-            panel.Columns = _settings.GridWidth;
-            panel.Rows = _settings.GridHeight;
+            panel.Columns = _columns;
+            panel.Rows = _rows;
             
             // Re-assigning the panel is tricky with LoadContent, but UniformGrid in XAML will pick up Columns/Rows
             // We'll use a backing list for the ItemsControl
             List<int> items = new List<int>();
-            for (int i = 0; i < _settings.GridWidth * _settings.GridHeight; i++)
+            for (int i = 0; i < _columns * _rows; i++)
             {
                 items.Add(i);
             }
@@ -102,15 +117,15 @@ namespace WindowGridRedux
             double pY = screenPos.Y - _physicalBounds.Top;
 
             // Physical cell size
-            double pCellW = (double)_physicalBounds.Width / _settings.GridWidth;
-            double pCellH = (double)_physicalBounds.Height / _settings.GridHeight;
+            double pCellW = (double)_physicalBounds.Width / _columns;
+            double pCellH = (double)_physicalBounds.Height / _rows;
 
             col = (int)(pX / pCellW);
             row = (int)(pY / pCellH);
 
             // Clamp
-            col = Math.Max(0, Math.Min(_settings.GridWidth - 1, col));
-            row = Math.Max(0, Math.Min(_settings.GridHeight - 1, row));
+            col = Math.Max(0, Math.Min(_columns - 1, col));
+            row = Math.Max(0, Math.Min(_rows - 1, row));
         }
 
         private void GridCell_MouseEnter(object sender, System.Windows.Input.MouseEventArgs e)
@@ -134,8 +149,8 @@ namespace WindowGridRedux
                 int endRow = (int)_endPos.Value.Y;
 
                 // Visual Representation uses Logical Units (WPF)
-                double cellWidth = ActualWidth / _settings.GridWidth;
-                double cellHeight = ActualHeight / _settings.GridHeight;
+                double cellWidth = ActualWidth / _columns;
+                double cellHeight = ActualHeight / _rows;
 
                 int minCol = Math.Min(startCol, endCol);
                 int minRow = Math.Min(startRow, endRow);
@@ -178,8 +193,8 @@ namespace WindowGridRedux
             int colSpan = Math.Abs(startCol - endCol) + 1;
             int rowSpan = Math.Abs(startRow - endRow) + 1;
 
-            double pCellW = (double)_physicalBounds.Width / _settings.GridWidth;
-            double pCellH = (double)_physicalBounds.Height / _settings.GridHeight;
+            double pCellW = (double)_physicalBounds.Width / _columns;
+            double pCellH = (double)_physicalBounds.Height / _rows;
 
             int pX = (int)Math.Round(_physicalBounds.Left + (targetColStart * pCellW));
             int pY = (int)Math.Round(_physicalBounds.Top + (targetRowStart * pCellH));
@@ -204,8 +219,8 @@ namespace WindowGridRedux
             var panel = FindVisualChild<UniformGrid>(GridItems);
             if (panel != null)
             {
-                panel.Columns = _settings.GridWidth;
-                panel.Rows = _settings.GridHeight;
+                panel.Columns = _columns;
+                panel.Rows = _rows;
             }
         }
 
