@@ -19,10 +19,17 @@ public class MainController : IDisposable
         _settings = Settings.Instance;
         _hook = new GlobalHook();
         
+        // Initialize state to avoid missing the first drag if app started while button was down
+        _isLButtonDown = (GetAsyncKeyState(VK_LBUTTON) & 0x8000) != 0;
+
         _hook.LeftButtonDown += OnLeftButtonDown;
         _hook.RightButtonDown += OnRightButtonDown;
         _hook.MouseMoved += OnMouseMoved;
     }
+
+    [System.Runtime.InteropServices.DllImport("user32.dll")]
+    private static extern short GetAsyncKeyState(int vKey);
+    private const int VK_LBUTTON = 0x01;
 
     private void OnMouseMoved(System.Drawing.Point pos)
     {
@@ -36,7 +43,11 @@ public class MainController : IDisposable
 
     private void OnLeftButtonDown(bool down)
     {
-        _isLButtonDown = down;
+        if (_isLButtonDown != down)
+        {
+            _isLButtonDown = down;
+        }
+        
         if (!down && _isDragging)
         {
             SnapAndClose();
@@ -47,8 +58,18 @@ public class MainController : IDisposable
     {
         if (_isLButtonDown && !_isDragging)
         {
-            ActivateGrid();
-            return true;
+            var cursorPosition = System.Windows.Forms.Cursor.Position;
+            IntPtr target = WindowManager.GetTargetWindow(new System.Drawing.Point(cursorPosition.X, cursorPosition.Y));
+            
+            if (target != IntPtr.Zero)
+            {
+                // Break drag loop IMMEDIATELY on the hook thread
+                // This ensures the OS stops the drag before we return from the hook
+                WindowManager.BreakDragLoop(target);
+                
+                ActivateGrid(target);
+                return true;
+            }
         }
         else if (_isDragging && _overlay != null)
         {
@@ -89,34 +110,26 @@ public class MainController : IDisposable
         return false;
     }
 
-    private async void ActivateGrid()
+    private async void ActivateGrid(IntPtr target)
     {
-        if (_isDragging) return;
-
         try
         {
-            // Offload the heavy work to ensure the Hook callback returns immediately
-            await System.Windows.Application.Current.Dispatcher.InvokeAsync(async () =>
+            _targetHWnd = target;
+            _isDragging = true;
+
+            // Offload the heavy work (WPF window creation) to ensure we don't block the UI thread too much
+            await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
             {
                 var cursorPosition = System.Windows.Forms.Cursor.Position;
-                _targetHWnd = WindowManager.GetTargetWindow(new System.Drawing.Point(cursorPosition.X, cursorPosition.Y));
-
-                if (_targetHWnd != IntPtr.Zero)
-                {
-                    // Break the OS drag loop so we can take over
-                    WindowManager.BreakDragLoop(_targetHWnd);
-
-                    // Ensure restored BEFORE waiting, to give it time to animate/update
-                    WindowManager.EnsureRestored(_targetHWnd);
-                    
-                    _isDragging = true;
-                    _overlay = new GridOverlay(_settings, _targetHWnd);
-                    _overlay.Show();
-                    
-                    // Immediately start selection from the current cursor position
-                    // so the first Right Click activates AND starts the span.
-                    _overlay.StartSelection(new System.Windows.Point(cursorPosition.X, cursorPosition.Y));
-                }
+                
+                // Ensure restored BEFORE showing overlay
+                WindowManager.EnsureRestored(_targetHWnd);
+                
+                _overlay = new GridOverlay(_settings, _targetHWnd);
+                _overlay.Show();
+                
+                // Immediately start selection from the current cursor position
+                _overlay.StartSelection(new System.Windows.Point(cursorPosition.X, cursorPosition.Y));
             });
         }
         catch (Exception ex)

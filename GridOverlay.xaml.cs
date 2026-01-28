@@ -42,19 +42,13 @@ public partial class GridOverlay : Window
         _columns = monitorConfig.Columns;
 
         // 1. Set basic properties so the window exists and is associated with the right monitor.
-        // WPF's Window.Left/Top are in SYSTEM DIUs (logical units relative to primary monitor).
-        var primaryScreen = System.Windows.Forms.Screen.PrimaryScreen;
-        double systemScaleX = (primaryScreen?.Bounds.Width ?? 1.0) / System.Windows.SystemParameters.PrimaryScreenWidth;
-        double systemScaleY = (primaryScreen?.Bounds.Height ?? 1.0) / System.Windows.SystemParameters.PrimaryScreenHeight;
+        // WPF's Window.Left/Top usually are in SYSTEM DIUs, but user requests 1:1 mapping.
+        this.Left = _physicalBounds.Left;
+        this.Top = _physicalBounds.Top;
+        this.Width = _physicalBounds.Width;
+        this.Height = _physicalBounds.Height;
 
-        this.Left = _physicalBounds.Left / systemScaleX;
-        this.Top = _physicalBounds.Top / systemScaleY;
-        
-        // We'll set physical size via Win32 after Show() to be absolutely sure.
-        this.Width = 100; // Placeholder
-        this.Height = 100; // Placeholder
-
-        Logger.Log($"GridOverlay Logical Setup: Left={this.Left}, Top={this.Top} | Area={_physicalBounds} | SystemScale={systemScaleX:F2}");
+        Logger.Log($"GridOverlay Logical Setup: Left={this.Left}, Top={this.Top} | Area={_physicalBounds}");
         
         this.Loaded += (s, e) => {
             var helper = new System.Windows.Interop.WindowInteropHelper(this);
@@ -153,10 +147,6 @@ public partial class GridOverlay : Window
 
         _lastStartCol = startCol; _lastStartRow = startRow; _lastEndCol = endCol; _lastEndRow = endRow;
 
-        // Short delay for final snap to let OS window transitions/animations settle
-        // This is critical for DWM to report the correct 'extended frame bounds'.
-        if (final) await System.Threading.Tasks.Task.Delay(50);
-
         int targetColStart = Math.Min(startCol, endCol);
         int targetRowStart = Math.Min(startRow, endRow);
         int targetColEnd = targetColStart + (Math.Abs(startCol - endCol) + 1);
@@ -175,12 +165,8 @@ public partial class GridOverlay : Window
 
         Logger.Log($"Snap Physical Calc: Base={_physicalBounds.Left},{_physicalBounds.Top} | Cells={targetColStart},{targetRowStart} to {targetColEnd},{targetRowEnd} | Target={pX},{pY} {pWidth}x{pHeight}");
 
-        // Refresh borders every time we snap, as the window might have moved between monitors
-        // with different scaling factors during the drag.
-        var currentBorders = WindowManager.GetWindowBorders(_targetHWnd);
-
-        // Use the new Physical API which handles the specific DPI scaling logic internally
-        WindowManager.SetWindowBoundsPhysical(_targetHWnd, new System.Drawing.Rectangle(pX, pY, pWidth, pHeight), currentBorders);
+        // Use the physical API with fresh borders to ensure accuracy
+        WindowManager.SetWindowBounds(_targetHWnd, new System.Drawing.Rectangle(pX, pY, pWidth, pHeight), null, _settings.WindowMargin);
     }
 
     private void Window_Loaded(object sender, RoutedEventArgs e)
