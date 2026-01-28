@@ -63,6 +63,66 @@ namespace TheGriddler
 
         public List<MonitorConfig> MonitorConfigs { get; set; } = new List<MonitorConfig>();
 
+        private string _gridColor = "#22FFFFFF";
+        public string GridColor
+        {
+            get => _gridColor;
+            set
+            {
+                if (_gridColor != value)
+                {
+                    _gridColor = value;
+                    OnPropertyChanged();
+                    if (!IsLoading) Save();
+                }
+            }
+        }
+
+        private string _selectionColor = "#2200FFFF";
+        public string SelectionColor
+        {
+            get => _selectionColor;
+            set
+            {
+                if (_selectionColor != value)
+                {
+                    _selectionColor = value;
+                    OnPropertyChanged();
+                    if (!IsLoading) Save();
+                }
+            }
+        }
+
+        private string _selectionBorderColor = "#8800FFFF";
+        public string SelectionBorderColor
+        {
+            get => _selectionBorderColor;
+            set
+            {
+                if (_selectionBorderColor != value)
+                {
+                    _selectionBorderColor = value;
+                    OnPropertyChanged();
+                    if (!IsLoading) Save();
+                }
+            }
+        }
+
+        private bool _isDarkMode = true;
+        public bool IsDarkMode
+        {
+            get => _isDarkMode;
+            set
+            {
+                if (_isDarkMode != value)
+                {
+                    _isDarkMode = value;
+                    OnPropertyChanged();
+                    if (!IsLoading) Save();
+                }
+            }
+        }
+
         public MonitorConfig GetOrCreateMonitorConfig(string deviceName, string friendlyName = "")
         {
             var config = MonitorConfigs.Find(m => m.DeviceName == deviceName);

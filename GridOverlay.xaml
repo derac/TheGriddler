@@ -1,10 +1,14 @@
 <Window x:Class="TheGriddler.GridOverlay"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="clr-namespace:TheGriddler"
         Title="GridOverlay" Height="450" Width="800"
         WindowStyle="None" AllowsTransparency="True" Background="Transparent"
         Topmost="True" ShowInTaskbar="False" WindowStartupLocation="Manual"
         Loaded="Window_Loaded">
+    <Window.Resources>
+        <local:HexToBrushConverter x:Key="HexToBrushConverter" />
+    </Window.Resources>
     <Grid Name="MainGrid">
         <ItemsControl Name="GridItems">
             <ItemsControl.ItemsPanel>
@@ -14,13 +18,16 @@
             </ItemsControl.ItemsPanel>
             <ItemsControl.ItemTemplate>
                 <DataTemplate>
-                    <Border BorderBrush="#22FFFFFF" BorderThickness="0.5">
+                    <Border BorderBrush="{Binding GridColor, Source={x:Static local:Settings.Instance}, Converter={StaticResource HexToBrushConverter}}" BorderThickness="0.5">
                         <Grid Background="Transparent" MouseEnter="GridCell_MouseEnter" MouseLeftButtonDown="GridCell_MouseLeftButtonDown" />
                     </Border>
                 </DataTemplate>
             </ItemsControl.ItemTemplate>
         </ItemsControl>
         
-        <Border Name="SelectionRect" Background="#2200FFFF" BorderBrush="#8800FFFF" BorderThickness="2" HorizontalAlignment="Left" VerticalAlignment="Top" Visibility="Collapsed" IsHitTestVisible="False" />
+        <Border Name="SelectionRect" 
+                Background="{Binding SelectionColor, Source={x:Static local:Settings.Instance}, Converter={StaticResource HexToBrushConverter}}" 
+                BorderBrush="{Binding SelectionBorderColor, Source={x:Static local:Settings.Instance}, Converter={StaticResource HexToBrushConverter}}" 
+                BorderThickness="2" HorizontalAlignment="Left" VerticalAlignment="Top" Visibility="Collapsed" IsHitTestVisible="False" />
     </Grid>
 </Window>
