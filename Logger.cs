@@ -1,29 +1,28 @@
 using System;
 using System.IO;
 
-namespace TheGriddler
+namespace TheGriddler;
+
+public static class Logger
 {
-    public static class Logger
+    private static string _logPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "debug.log");
+
+    static Logger()
     {
-        private static string _logPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "debug.log");
-
-        static Logger()
+        try
         {
-            try
-            {
-                if (File.Exists(_logPath)) File.Delete(_logPath);
-            }
-            catch { }
+            if (File.Exists(_logPath)) File.Delete(_logPath);
         }
+        catch { }
+    }
 
-        public static void Log(string message)
+    public static void Log(string message)
+    {
+        try
         {
-            try
-            {
-                string timestamp = DateTime.Now.ToString("HH:mm:ss.fff");
-                File.AppendAllText(_logPath, $"[{timestamp}] {message}{Environment.NewLine}");
-            }
-            catch { }
+            string timestamp = DateTime.Now.ToString("HH:mm:ss.fff");
+            File.AppendAllText(_logPath, $"[{timestamp}] {message}{Environment.NewLine}");
         }
+        catch { }
     }
 }

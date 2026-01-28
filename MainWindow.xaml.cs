@@ -49,6 +49,11 @@ public partial class MainWindow : Window
         Settings.Instance.IsDarkMode = !Settings.Instance.IsDarkMode;
     }
 
+    private void ResetColors_Click(object sender, RoutedEventArgs e)
+    {
+        Settings.Instance.ResetColors();
+    }
+
     private void PickColor_Click(object sender, RoutedEventArgs e)
     {
         if (sender is System.Windows.Controls.Button btn && btn.Tag is string propertyName)
@@ -66,7 +71,12 @@ public partial class MainWindow : Window
 
             if (dialog.ShowDialog() == System.Windows.Forms.DialogResult.OK)
             {
-                string hex = "#" + dialog.Color.A.ToString("X2") + dialog.Color.R.ToString("X2") + dialog.Color.G.ToString("X2") + dialog.Color.B.ToString("X2");
+                string alpha = "FF";
+                if (!string.IsNullOrEmpty(currentValue) && currentValue.StartsWith("#") && currentValue.Length >= 3)
+                {
+                    alpha = currentValue.Substring(1, 2);
+                }
+                string hex = "#" + alpha + dialog.Color.R.ToString("X2") + dialog.Color.G.ToString("X2") + dialog.Color.B.ToString("X2");
                 typeof(Settings).GetProperty(propertyName)?.SetValue(Settings.Instance, hex);
             }
         }

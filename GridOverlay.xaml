@@ -19,7 +19,7 @@
             <ItemsControl.ItemTemplate>
                 <DataTemplate>
                     <Border BorderBrush="{Binding GridColor, Source={x:Static local:Settings.Instance}, Converter={StaticResource HexToBrushConverter}}" BorderThickness="0.5">
-                        <Grid Background="Transparent" MouseEnter="GridCell_MouseEnter" MouseLeftButtonDown="GridCell_MouseLeftButtonDown" />
+                        <Grid Background="Transparent" />
                     </Border>
                 </DataTemplate>
             </ItemsControl.ItemTemplate>

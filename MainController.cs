@@ -2,102 +2,99 @@ using System;
 using System.Drawing;
 using System.Windows;
 
-namespace TheGriddler
+namespace TheGriddler;
+
+public class MainController : IDisposable
 {
-    public class MainController : IDisposable
+    private GlobalHook _hook;
+    private Settings _settings;
+    private GridOverlay? _overlay;
+    private IntPtr _targetHWnd;
+    private bool _isDragging;
+    private bool _isLButtonDown;
+    private bool _suppressRightUp;
+
+    public MainController()
     {
-        private GlobalHook _hook;
-        private Settings _settings;
-        private GridOverlay? _overlay;
-        private IntPtr _targetHWnd;
-        private bool _isDragging;
-        private bool _isLButtonDown;
-        private bool _suppressRightUp;
+        _settings = Settings.Instance;
+        _hook = new GlobalHook();
+        
+        _hook.LeftButtonDown += OnLeftButtonDown;
+        _hook.RightButtonDown += OnRightButtonDown;
+        _hook.MouseMoved += OnMouseMoved;
+    }
 
-        public MainController()
+    private void OnMouseMoved(System.Drawing.Point pos)
+    {
+        if (_isDragging && _overlay != null)
         {
-            _settings = Settings.Instance;
-            _hook = new GlobalHook();
-            
-            _hook.LeftButtonDown += OnLeftButtonDown;
-            _hook.RightButtonDown += OnRightButtonDown;
-            _hook.MouseMoved += OnMouseMoved;
+            // Pass raw screen coordinates (physical pixels)
+            // GridOverlay handles DPI and offset conversion internally
+            _overlay.UpdateMouse(new System.Windows.Point(pos.X, pos.Y));
         }
+    }
 
-        private void OnMouseMoved(System.Drawing.Point pos)
+    private void OnLeftButtonDown(bool down)
+    {
+        _isLButtonDown = down;
+        if (!down && _isDragging)
         {
-            if (_isDragging && _overlay != null)
-            {
-                // Pass raw screen coordinates (physical pixels)
-                // GridOverlay handles DPI and offset conversion internally
-                _overlay.UpdateMouse(new System.Windows.Point(pos.X, pos.Y));
-            }
+            SnapAndClose();
         }
+    }
 
-        private void OnLeftButtonDown(bool down)
+    private bool HandleRightClick()
+    {
+        if (_isLButtonDown && !_isDragging)
         {
-            _isLButtonDown = down;
-            if (!down)
-            {
-                if (_isDragging)
-                {
-                    SnapAndClose();
-                }
-            }
+            ActivateGrid();
+            return true;
         }
-
-        private bool HandleRightClick()
+        else if (_isDragging && _overlay != null)
         {
-            if (_isLButtonDown && !_isDragging)
+            if (!_overlay.IsSelecting)
             {
-                ActivateGrid();
-                return true;
-            }
-            else if (_isDragging && _overlay != null)
-            {
-                if (!_overlay.IsSelecting)
-                {
-                    // Start selection at current mouse position
-                    var cursorPosition = System.Windows.Forms.Cursor.Position;
-                    _overlay.StartSelection(new System.Windows.Point(cursorPosition.X, cursorPosition.Y));
-                }
-                else
-                {
-                    // Finish selection
-                    SnapAndClose();
-                }
-                return true;
-            }
-            return false;
-        }
-
-        private bool OnRightButtonDown(bool down)
-        {
-            if (down)
-            {
-                if (HandleRightClick())
-                {
-                    _suppressRightUp = true;
-                    return true;
-                }
+                // Start selection at current mouse position
+                var cursorPosition = System.Windows.Forms.Cursor.Position;
+                _overlay.StartSelection(new System.Windows.Point(cursorPosition.X, cursorPosition.Y));
             }
             else
             {
-                if (_suppressRightUp)
-                {
-                    _suppressRightUp = false;
-                    return true;
-                }
+                // Finish selection
+                SnapAndClose();
             }
-            return false;
+            return true;
         }
+        return false;
+    }
 
-
-
-        private async void ActivateGrid()
+    private bool OnRightButtonDown(bool down)
+    {
+        if (down)
         {
-            if (_isDragging) return;
+            if (HandleRightClick())
+            {
+                _suppressRightUp = true;
+                return true;
+            }
+        }
+        else
+        {
+            if (_suppressRightUp)
+            {
+                _suppressRightUp = false;
+                return true;
+            }
+        }
+        return false;
+    }
 
+    private async void ActivateGrid()
+    {
+        if (_isDragging) return;
+
+        try
+        {
             // Offload the heavy work to ensure the Hook callback returns immediately
             await System.Windows.Application.Current.Dispatcher.InvokeAsync(async () =>
             {
@@ -122,34 +119,49 @@ namespace TheGriddler
                 }
             });
         }
-
-        private void SnapAndClose()
+        catch (Exception ex)
         {
-            if (_overlay != null)
+            Logger.Log($"Error activating grid: {ex.Message}");
+            _isDragging = false;
+        }
+    }
+
+    private async void SnapAndClose()
+    {
+        if (_overlay != null)
+        {
+            try
             {
                 if (_overlay.IsSelecting)
                 {
-                    _overlay.Snap(final: true);
+                    await _overlay.SnapAsync(final: true);
                 }
-                _overlay.Close();
-                _overlay = null;
             }
-            _isDragging = false;
-        }
-
-        private void CloseOverlay()
-        {
-            if (_overlay != null)
+            catch (Exception ex)
+            {
+                Logger.Log($"Error during snap: {ex.Message}");
+            }
+            finally
             {
                 _overlay.Close();
                 _overlay = null;
             }
         }
+        _isDragging = false;
+    }
 
-        public void Dispose()
+    private void CloseOverlay()
+    {
+        if (_overlay != null)
         {
-            _hook.Dispose();
-            CloseOverlay();
+            try { _overlay.Close(); } catch { }
+            _overlay = null;
         }
+    }
+
+    public void Dispose()
+    {
+        _hook.Dispose();
+        CloseOverlay();
     }
 }

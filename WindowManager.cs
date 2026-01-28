@@ -270,36 +270,18 @@ namespace TheGriddler
                     return new WindowBorders { ScaleFactor = 1.0 };
                 }
 
-                // DIAGNOSIS: If the window belongs to a non-DPI-aware process, GetWindowRect might return
-                // logical pixels even if our thread is PerMonitorV2. DwmGetWindowAttribute always returns physical.
-                // We compare them to see if we need to scale up the windowRect.
-                double windowW = windowRect.Right - windowRect.Left;
-                double windowH = windowRect.Bottom - windowRect.Top;
-                double frameW = frameRect.Right - frameRect.Left;
-                double frameH = frameRect.Bottom - frameRect.Top;
-
-                double scaleX = 1.0;
-                double scaleY = 1.0;
-
-                // If windowRect is significantly smaller than frameRect, it's likely logical pixels.
-                // Note: Standard borders are tiny (usually < 20px), so if diff is e.g. > 50px, it's scaling.
-                if (windowW > 0 && frameW > windowW + 50)
-                {
-                    scaleX = frameW / windowW;
-                    scaleY = frameH / windowH;
-                    Logger.Log($"Detected virtualized window. Estimated internal scale: {scaleX:F2}x{scaleY:F2}");
-                }
-
+                // In PerMonitorV2 thread, both Rects are physical.
+                // We don't try to guess ScaleFactor here anymore, we let the feedback loop in SetWindowBounds handle it.
                 var borders = new WindowBorders
                 {
-                    OffsetX = (int)Math.Round(frameRect.Left - (windowRect.Left * scaleX)),
-                    OffsetY = (int)Math.Round(frameRect.Top - (windowRect.Top * scaleY)),
-                    OffsetWidth = (int)Math.Round((windowRect.Right - windowRect.Left) * scaleX - (frameRect.Right - frameRect.Left)),
-                    OffsetHeight = (int)Math.Round((windowRect.Bottom - windowRect.Top) * scaleY - (frameRect.Bottom - frameRect.Top)),
-                    ScaleFactor = scaleX
+                    OffsetX = frameRect.Left - windowRect.Left,
+                    OffsetY = frameRect.Top - windowRect.Top,
+                    OffsetWidth = windowRect.Width - frameRect.Width,
+                    OffsetHeight = windowRect.Height - frameRect.Height,
+                    ScaleFactor = 1.0 
                 };
 
-                Logger.Log($"GetWindowBorders {hWnd:X}: wRect={windowRect.Left},{windowRect.Top},{windowRect.Width}x{windowRect.Height} | fRect={frameRect.Left},{frameRect.Top},{frameRect.Width}x{frameRect.Height} | scale={scaleX:F2} | finalBorders={borders.OffsetX},{borders.OffsetY},{borders.OffsetWidth},{borders.OffsetHeight}");
+                Logger.Log($"GetWindowBorders {hWnd:X}: wRect={windowRect.Left},{windowRect.Top},{windowRect.Width}x{windowRect.Height} | fRect={frameRect.Left},{frameRect.Top},{frameRect.Width}x{frameRect.Height} | finalBorders={borders.OffsetX},{borders.OffsetY},{borders.OffsetWidth},{borders.OffsetHeight}");
 
                 return borders;
             }
@@ -321,69 +303,61 @@ namespace TheGriddler
             IntPtr oldContext = SetThreadDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
             try
             {
-                Logger.Log($"SetWindowBoundsPhysical {hWnd:X}: Target={physicalBounds}");
+                Logger.Log($"=== SetWindowBoundsPhysical START {hWnd:X} ===");
+                Logger.Log($"Target Physical: {physicalBounds}");
 
                 uint flags = SWP_NOZORDER | SWP_SHOWWINDOW | SWP_NOACTIVATE | SWP_FRAMECHANGED | SWP_NOCOPYBITS;
 
-                // Pass 1: Move to target monitor to trigger OS DPI transition
-                SetWindowPos(hWnd, IntPtr.Zero, physicalBounds.X, physicalBounds.Y, physicalBounds.Width, physicalBounds.Height, flags);
-
-                // Pass 2: Re-measure borders and scale
-                WindowBorders actualBorders = GetWindowBorders(hWnd);
+                WindowBorders borders = GetWindowBorders(hWnd);
                 
-                // GetWindowRect might still report old logical coords or new physical coords depending on OS lag.
-                GetWindowRect(hWnd, out RECT currentRect);
-                double actualW = currentRect.Right - currentRect.Left;
-                double actualH = currentRect.Bottom - currentRect.Top;
+                // Track our logical dimensions
+                int curL_X = physicalBounds.X - borders.OffsetX;
+                int curL_Y = physicalBounds.Y - borders.OffsetY;
+                int curL_W = physicalBounds.Width + borders.OffsetWidth;
+                int curL_H = physicalBounds.Height + borders.OffsetHeight;
 
-                // Calculate valid Scale X which seems to be the culprit.
-                double inputScaleX = (physicalBounds.Width > 0) ? (actualW / physicalBounds.Width) : 1.0;
-                double inputScaleY = (physicalBounds.Height > 0) ? (actualH / physicalBounds.Height) : 1.0;
-
-                // Heuristic: If we detected virtualization (ScaleFactor > 1.1) but inputScale is near 1.0,
-                // it means GetWindowRect returned physical-like sizing (temporarily) but WILL act virtualized.
-                // We should preemptively correct using the detected ScaleFactor.
-                
-                if (actualBorders.ScaleFactor > 1.1 && inputScaleX < 1.1)
+                for (int pass = 1; pass <= 2; pass++)
                 {
-                     Logger.Log($"Lag Detection: InputScale {inputScaleX:F2} vs Detected {actualBorders.ScaleFactor:F2}. Preempting lag.");
-                     inputScaleX = actualBorders.ScaleFactor;
-                     inputScaleY = actualBorders.ScaleFactor; // Assume uniform scaling
-                }
+                    Logger.Log($"Pass {pass}: Setting logical {curL_X},{curL_Y} {curL_W}x{curL_H}");
+                    SetWindowPos(hWnd, IntPtr.Zero, curL_X, curL_Y, curL_W, curL_H, flags);
 
-                // Fix for "First draw incorrect" on DPI change:
-                // If the app is native (ScaleFactor ~ 1.0) but sizes mismatch, assume transient resizing.
-                if (actualBorders.ScaleFactor < 1.1 && (inputScaleX > 1.1 || inputScaleX < 0.9)) 
-                {
-                     Logger.Log($"Transient DPI Reaction: InputScale {inputScaleX:F2} vs Detected {actualBorders.ScaleFactor:F2}. Enforcing physical bounds.");
-                     inputScaleX = 1.0;
-                     inputScaleY = 1.0;
-                }
+                    if (DwmGetWindowAttribute(hWnd, DWMWA_EXTENDED_FRAME_BOUNDS, out RECT actualFrame, Marshal.SizeOf<RECT>()) == 0)
+                    {
+                        int errorX = actualFrame.Left - physicalBounds.Left;
+                        int errorY = actualFrame.Top - physicalBounds.Top;
+                        int errorW = actualFrame.Width - physicalBounds.Width;
+                        int errorH = actualFrame.Height - physicalBounds.Height;
 
-                if (Math.Abs(inputScaleX - 1.0) < 0.01) inputScaleX = 1.0;
-                if (Math.Abs(inputScaleY - 1.0) < 0.01) inputScaleY = 1.0;
-                
-                // Adjustment logic:
-                // We want to place the window at a specific PHYSICAL location (X, Y).
-                // SetWindowPos from a PMv2 thread expects physical desktop coordinates for position.
-                // However, the SIZE (cx, cy) determines the window size. If the window is virtualized,
-                // the OS will multiply the size we give it by the scale factor.
-                // To get a final physical size of P_Size, we must pass P_Size / Scale.
-                
-                // Position (X, Y): use physical coordinates directly. Match the Visual Frame (physicalBounds)
-                // adjusted by the physical border offset.
-                int finalX = physicalBounds.X - actualBorders.OffsetX;
-                int finalY = physicalBounds.Y - actualBorders.OffsetY;
-                
-                // Size (W, H): Scale down so the OS scales it back up to our desired physical size.
-                int finalW = (int)Math.Round((physicalBounds.Width + actualBorders.OffsetWidth) / inputScaleX);
-                int finalH = (int)Math.Round((physicalBounds.Height + actualBorders.OffsetHeight) / inputScaleY);
+                        Logger.Log($"Verification {pass}: Visual={actualFrame.Left},{actualFrame.Top} {actualFrame.Width}x{actualFrame.Height} | Error={errorX},{errorY} {errorW}x{errorH}");
 
-                if (inputScaleX != 1.0 || actualBorders.OffsetWidth != 0 || actualBorders.ScaleFactor > 1.1)
-                {
-                    Logger.Log($"Pass 2 Adjustment: InputScale={inputScaleX:F2} (Detected={actualBorders.ScaleFactor:F2}) | CurrentPhysical={actualW}x{actualH} | FinalLogical={finalX},{finalY},{finalW}x{finalH}");
-                    SetWindowPos(hWnd, IntPtr.Zero, finalX, finalY, finalW, finalH, flags);
+                        if (errorX == 0 && errorY == 0 && errorW == 0 && errorH == 0) break;
+
+                        if (pass == 1)
+                        {
+                            // Improved Nudge Strategy:
+                            // We determine the effective scale the OS used for this window on this pass.
+                            // EffectiveScale = (PhysicalResult + InternalBorders) / LogicalRequested
+                            // Then targetLogical = (TargetPhysical + InternalBorders) / EffectiveScale
+                            
+                            double effectiveScaleW = (double)(actualFrame.Width + borders.OffsetWidth) / curL_W;
+                            double effectiveScaleH = (double)(actualFrame.Height + borders.OffsetHeight) / curL_H;
+                            
+                            // For X and Y, we use the average scale or just fallback to 1.0 if we can't tell.
+                            // But usually X/Y scale matches W/H scale.
+                            double effectiveScaleX = effectiveScaleW;
+                            double effectiveScaleY = effectiveScaleH;
+
+                            if (effectiveScaleW > 0.1) curL_W = (int)Math.Round((physicalBounds.Width + borders.OffsetWidth) / effectiveScaleW);
+                            if (effectiveScaleH > 0.1) curL_H = (int)Math.Round((physicalBounds.Height + borders.OffsetHeight) / effectiveScaleH);
+                            
+                            // For position, we nudge based on the error divided by the measured scale.
+                            if (effectiveScaleX > 0.1) curL_X -= (int)Math.Round(errorX / effectiveScaleX);
+                            if (effectiveScaleY > 0.1) curL_Y -= (int)Math.Round(errorY / effectiveScaleY);
+                        }
+                    }
                 }
+                
+                Logger.Log($"=== SetWindowBoundsPhysical END ===");
             }
             finally
             {

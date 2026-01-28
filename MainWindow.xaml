@@ -207,6 +207,23 @@
                                     </Button.Style>
                                 </Button>
                             </Grid>
+
+                            <Button Content="Reset to Defaults" Margin="0,15,0,0" Click="ResetColors_Click">
+                                <Button.Style>
+                                    <Style TargetType="Button">
+                                        <Setter Property="Padding" Value="10,5" />
+                                        <Setter Property="Background" Value="Transparent" />
+                                        <Setter Property="Foreground" Value="{StaticResource DarkFg}" />
+                                        <Setter Property="BorderBrush" Value="{StaticResource DarkBorder}" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=Window}, Path=DataContext.IsDarkMode}" Value="False">
+                                                <Setter Property="Foreground" Value="{StaticResource LightFg}" />
+                                                <Setter Property="BorderBrush" Value="{StaticResource LightBorder}" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Button.Style>
+                            </Button>
                         </StackPanel>
                     </GroupBox>
 
