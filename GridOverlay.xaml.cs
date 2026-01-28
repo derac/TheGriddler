@@ -85,26 +85,22 @@ public partial class GridOverlay : Window
 
     private void CalculateGridPosition(System.Windows.Point screenPos, out int col, out int row)
     {
-        // ALWAYS fetch the current screen for the point being calculated
-        var screen = System.Windows.Forms.Screen.FromPoint(new System.Drawing.Point((int)screenPos.X, (int)screenPos.Y));
-        var currentBounds = screen.WorkingArea;
+        // Use the initial physical bounds to lock calculations to the starting monitor
+        double relX = screenPos.X - _physicalBounds.Left;
+        double relY = screenPos.Y - _physicalBounds.Top;
 
-        // Relative physical offset
-        double relX = screenPos.X - currentBounds.Left;
-        double relY = screenPos.Y - currentBounds.Top;
+        // Clamp physical offsets to the initial monitor bounds
+        double pX = Math.Max(0, Math.Min(_physicalBounds.Width - 1, relX));
+        double pY = Math.Max(0, Math.Min(_physicalBounds.Height - 1, relY));
 
-        // Clamp physical offsets to screen bounds 0..pWidth/pHeight
-        double pX = Math.Max(0, Math.Min(currentBounds.Width - 1, relX));
-        double pY = Math.Max(0, Math.Min(currentBounds.Height - 1, relY));
-
-        // Physical cell size
-        double pCellW = (double)currentBounds.Width / _columns;
-        double pCellH = (double)currentBounds.Height / _rows;
+        // Physical cell size on the starting monitor
+        double pCellW = (double)_physicalBounds.Width / _columns;
+        double pCellH = (double)_physicalBounds.Height / _rows;
 
         col = (int)(pX / pCellW);
         row = (int)(pY / pCellH);
 
-        Logger.Log($"DEBUG: CalculateGridPosition: screen={screen.DeviceName}, pos=({screenPos.X},{screenPos.Y}), bounds={currentBounds.Left},{currentBounds.Top} {currentBounds.Width}x{currentBounds.Height}, rel=({relX:F2},{relY:F2}), cell={pCellW:F2}x{pCellH:F2}, colrow={col},{row}");
+        Logger.Log($"DEBUG: CalculateGridPosition (Clamped): pos=({screenPos.X},{screenPos.Y}), bounds={_physicalBounds.Left},{_physicalBounds.Top} {_physicalBounds.Width}x{_physicalBounds.Height}, rel=({relX:F2},{relY:F2}), cell={pCellW:F2}x{pCellH:F2}, colrow={col},{row}");
 
         // Clamp indices just in case of floating point edge cases
         col = Math.Max(0, Math.Min(_columns - 1, col));
@@ -166,23 +162,18 @@ public partial class GridOverlay : Window
         int targetColEnd = targetColStart + (Math.Abs(startCol - endCol) + 1);
         int targetRowEnd = targetRowStart + (Math.Abs(startRow - endRow) + 1);
 
-        // Refresh physical bounds based on the current screen where the mouse is
-        var cursorPosition = System.Windows.Forms.Cursor.Position;
-        var screen = System.Windows.Forms.Screen.FromPoint(cursorPosition);
-        var currentPhysicalBounds = screen.WorkingArea;
-        
-        // Calculate boundaries in PHYSICAL coordinates relative to the monitor at snap time
-        double pX_start = currentPhysicalBounds.Left + (targetColStart * (double)currentPhysicalBounds.Width / _columns);
-        double pX_end = currentPhysicalBounds.Left + (targetColEnd * (double)currentPhysicalBounds.Width / _columns);
-        double pY_start = currentPhysicalBounds.Top + (targetRowStart * (double)currentPhysicalBounds.Height / _rows);
-        double pY_end = currentPhysicalBounds.Top + (targetRowEnd * (double)currentPhysicalBounds.Height / _rows);
+        // Calculate boundaries in PHYSICAL coordinates relative to the initial monitor
+        double pX_start = _physicalBounds.Left + (targetColStart * (double)_physicalBounds.Width / _columns);
+        double pX_end = _physicalBounds.Left + (targetColEnd * (double)_physicalBounds.Width / _columns);
+        double pY_start = _physicalBounds.Top + (targetRowStart * (double)_physicalBounds.Height / _rows);
+        double pY_end = _physicalBounds.Top + (targetRowEnd * (double)_physicalBounds.Height / _rows);
 
         int pX = (int)Math.Round(pX_start);
         int pY = (int)Math.Round(pY_start);
         int pWidth = (int)Math.Round(pX_end) - pX;
         int pHeight = (int)Math.Round(pY_end) - pY;
 
-        Logger.Log($"DEBUG: SnapAsync Calc (Dynamic): screen={screen.DeviceName}, pBounds={currentPhysicalBounds} | targetCells=({targetColStart},{targetRowStart}) to ({targetColEnd},{targetRowEnd}) | physicalStart=({pX_start:F2},{pY_start:F2}), physicalEnd=({pX_end:F2},{pY_end:F2}) | finalPBounds={pX},{pY} {pWidth}x{pHeight}");
+        Logger.Log($"DEBUG: SnapAsync Calc (Clamped): pBounds={_physicalBounds} | targetCells=({targetColStart},{targetRowStart}) to ({targetColEnd},{targetRowEnd}) | physicalStart=({pX_start:F2},{pY_start:F2}), physicalEnd=({pX_end:F2},{pY_end:F2}) | finalPBounds={pX},{pY} {pWidth}x{pHeight}");
 
         // Use the physical API to ensure accuracy
         WindowManager.SetWindowBounds(_targetHWnd, new System.Drawing.Rectangle(pX, pY, pWidth, pHeight));
