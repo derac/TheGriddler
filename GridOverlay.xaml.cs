@@ -104,7 +104,7 @@ public partial class GridOverlay : Window
         col = (int)(pX / pCellW);
         row = (int)(pY / pCellH);
 
-        Logger.Log($"DEBUG: CalculateGridPosition: screen={screen.DeviceName}, pos={screenPos}, bounds={currentBounds.Left},{currentBounds.Top}, clampedPRel={pX},{pY}, pCell={pCellW:F2}x{pCellH:F2}, rawColRow={col},{row}");
+        Logger.Log($"DEBUG: CalculateGridPosition: screen={screen.DeviceName}, pos=({screenPos.X},{screenPos.Y}), bounds={currentBounds.Left},{currentBounds.Top} {currentBounds.Width}x{currentBounds.Height}, rel=({relX:F2},{relY:F2}), cell={pCellW:F2}x{pCellH:F2}, colrow={col},{row}");
 
         // Clamp indices just in case of floating point edge cases
         col = Math.Max(0, Math.Min(_columns - 1, col));
