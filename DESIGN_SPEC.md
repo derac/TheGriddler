@@ -1,7 +1,7 @@
-# WindowGridRedux - Design & Specification
+# TheGriddler - Design & Specification
 
 ## Overview
-WindowGridRedux is a window management utility for Windows that allows users to quickly resize and position windows using a grid-based overlay. The user activates the grid by holding the Right Mouse Button (or a configured hotkey) and dragging to select a region on the screen. The target window (the one under the cursor) is then "snapped" to fill that physical region.
+TheGriddler is a window management utility for Windows that allows users to quickly resize and position windows using a grid-based overlay. The user activates the grid by holding the Right Mouse Button (or a configured hotkey) and dragging to select a region on the screen. The target window (the one under the cursor) is then "snapped" to fill that physical region.
 
 ## Core Workflow
 1.  **Activation**: 

@@ -1,7 +1,7 @@
 using System.Windows;
 using System.Runtime.InteropServices;
 
-namespace WindowGridRedux;
+namespace TheGriddler;
 
 /// <summary>
 /// Interaction logic for App.xaml
@@ -56,7 +56,7 @@ namespace WindowGridRedux;
             }
 
             _notifyIcon.Visible = true;
-            _notifyIcon.Text = "WindowGridRedux";
+            _notifyIcon.Text = "The Griddler";
             Logger.Log("NotifyIcon made visible.");
             _notifyIcon.MouseDoubleClick += (s, a) => ShowSettings();
 

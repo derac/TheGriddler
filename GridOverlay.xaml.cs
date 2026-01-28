@@ -6,7 +6,7 @@ using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Collections.Generic;
 
-namespace WindowGridRedux
+namespace TheGriddler
 {
     public partial class GridOverlay : Window
     {

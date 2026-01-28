@@ -2,7 +2,7 @@ using System;
 using System.Drawing;
 using System.Windows;
 
-namespace WindowGridRedux
+namespace TheGriddler
 {
     public class MainController : IDisposable
     {

@@ -2,7 +2,7 @@ using System;
 using System.Runtime.InteropServices;
 using System.Drawing;
 
-namespace WindowGridRedux
+namespace TheGriddler
 {
     public class WindowManager
     {

@@ -1,7 +1,7 @@
-﻿<Window x:Class="WindowGridRedux.MainWindow"
+﻿<Window x:Class="TheGriddler.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="WindowGrid (1.0.0.0)" Height="650" Width="800"
+        Title="The Griddler (1.0.0.0)" Height="650" Width="800"
         Background="#F0F0F0" Icon="Resources/icon.png">
     <Grid>
         <Grid.RowDefinitions>
@@ -68,10 +68,9 @@
 
                 <GroupBox Header="About" Margin="0,10,0,0">
                     <StackPanel Margin="5">
-                        <TextBlock Text="WindowGrid Redux" FontWeight="Bold"/>
+                        <TextBlock Text="The Griddler" FontWeight="Bold"/>
                         <TextBlock Text="Credits:" Margin="0,5,0,0" FontWeight="SemiBold"/>
                         <TextBlock Text="Derek Olson"/>
-                        <TextBlock Text="Joshua Wilding (Original Creator)"/>
                     </StackPanel>
                 </GroupBox>
             </StackPanel>

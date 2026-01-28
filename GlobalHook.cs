@@ -3,7 +3,7 @@ using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Windows.Input;
 
-namespace WindowGridRedux
+namespace TheGriddler
 {
     public class GlobalHook : IDisposable
     {

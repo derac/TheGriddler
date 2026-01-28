@@ -1,7 +1,7 @@
 using System;
 using System.IO;
 
-namespace WindowGridRedux
+namespace TheGriddler
 {
     public static class Logger
     {

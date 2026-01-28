@@ -6,7 +6,7 @@ using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Diagnostics;
 
-namespace WindowGridRedux
+namespace TheGriddler
 {
     public class Binding
     {
@@ -88,13 +88,13 @@ namespace WindowGridRedux
 
         private static readonly string SettingsPath = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-            "WindowGridRedux",
+            "TheGriddler",
             "settings.json"
         );
 
         private static readonly string StartupPath = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.Startup),
-            "WindowGridRedux.lnk"
+            "TheGriddler.lnk"
         );
 
         public Settings()

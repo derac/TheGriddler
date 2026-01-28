@@ -1,4 +1,4 @@
-<Window x:Class="WindowGridRedux.GridOverlay"
+<Window x:Class="TheGriddler.GridOverlay"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="GridOverlay" Height="450" Width="800"
