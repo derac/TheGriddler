@@ -2,14 +2,14 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:local="clr-namespace:TheGriddler.Views"
-        xmlns:converters="clr-namespace:TheGriddler.Converters"
+        xmlns:helpers="clr-namespace:TheGriddler.Helpers"
         xmlns:models="clr-namespace:TheGriddler.Models"
         Title="GridOverlay" Height="450" Width="800"
         WindowStyle="None" AllowsTransparency="True" Background="Transparent"
         Topmost="True" ShowInTaskbar="False" WindowStartupLocation="Manual"
         Loaded="Window_Loaded">
     <Window.Resources>
-        <converters:HexToBrushConverter x:Key="HexToBrushConverter" />
+        <helpers:HexToBrushConverter x:Key="HexToBrushConverter" />
     </Window.Resources>
     <Grid Name="MainGrid">
         <ItemsControl Name="GridItems">
