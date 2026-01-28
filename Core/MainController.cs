@@ -69,8 +69,12 @@ public class MainController : IDisposable
             
             if (target != IntPtr.Zero)
             {
-                // Defer the heavy stuff (Breaking drag, activating grid) to avoid blocking the hook
+                // Break drag loop IMMEDIATELY on the hook thread
+                WindowManager.BreakDragLoop(target);
+                
                 ActivateGrid(target, cursorPosition);
+                // We are now technically "dragging" (activating). 
+                // Any following right-clicks should be blocked too.
                 return true;
             }
         }
@@ -129,9 +133,6 @@ public class MainController : IDisposable
             // Offload the heavy work (WPF window creation) to ensure we don't block the UI thread too much
             await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
             {
-                // Now break the drag loop inside the dispatcher, safely
-                WindowManager.BreakDragLoop(_targetHWnd);
-
                 // Ensure restored BEFORE showing overlay
                 WindowManager.EnsureRestored(_targetHWnd);
                 
