@@ -56,6 +56,13 @@ public class MainController : IDisposable
 
     private bool HandleRightClick()
     {
+        // Re-check left button state using GetAsyncKeyState to be absolutely sure we aren't out of sync
+        bool physicalLButtonDown = (GetAsyncKeyState(VK_LBUTTON) & 0x8000) != 0;
+        if (_isLButtonDown != physicalLButtonDown)
+        {
+            _isLButtonDown = physicalLButtonDown;
+        }
+
         if (_isLButtonDown && !_isDragging)
         {
             var cursorPosition = System.Windows.Forms.Cursor.Position;
@@ -64,25 +71,28 @@ public class MainController : IDisposable
             if (target != IntPtr.Zero)
             {
                 // Break drag loop IMMEDIATELY on the hook thread
-                // This ensures the OS stops the drag before we return from the hook
                 WindowManager.BreakDragLoop(target);
                 
                 ActivateGrid(target, cursorPosition);
+                // We are now technically "dragging" (activating). 
+                // Any following right-clicks should be blocked too.
                 return true;
             }
         }
-        else if (_isDragging && _overlay != null)
+        else if (_isDragging)
         {
-            if (!_overlay.IsSelecting)
+            // If we are already dragging/activating, we ALWAYS handle (block) the right-click
+            if (_overlay != null)
             {
-                // Start selection at current mouse position
-                var cursorPosition = System.Windows.Forms.Cursor.Position;
-                _overlay.StartSelection(new System.Windows.Point(cursorPosition.X, cursorPosition.Y));
-            }
-            else
-            {
-                // Finish selection
-                SnapAndClose();
+                if (!_overlay.IsSelecting)
+                {
+                    var cursorPosition = System.Windows.Forms.Cursor.Position;
+                    _overlay.StartSelection(new System.Windows.Point(cursorPosition.X, cursorPosition.Y));
+                }
+                else
+                {
+                    SnapAndClose();
+                }
             }
             return true;
         }
@@ -101,11 +111,15 @@ public class MainController : IDisposable
         }
         else
         {
+            // Always check _suppressRightUp first
             if (_suppressRightUp)
             {
                 _suppressRightUp = false;
                 return true;
             }
+            
+            // If we are dragging, we should also block the RightUp even if suppress was missed somehow
+            if (_isDragging) return true;
         }
         return false;
     }
