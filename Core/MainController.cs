@@ -69,6 +69,25 @@ public class MainController : IDisposable
             
             if (target != IntPtr.Zero)
             {
+                // Verify if the window is truly in a move/size loop
+                uint processId;
+                uint threadId = NativeMethods.GetWindowThreadProcessId(target, out processId);
+                
+                NativeMethods.GUITHREADINFO guiInfo = new NativeMethods.GUITHREADINFO();
+                guiInfo.cbSize = System.Runtime.InteropServices.Marshal.SizeOf(guiInfo);
+                
+                if (NativeMethods.GetGUIThreadInfo(threadId, ref guiInfo))
+                {
+                    // Check if flags indicate move/size OR if hwndMoveSize is set (either/or check is robust)
+                    bool isMoving = (guiInfo.flags & NativeMethods.GUI_INMOVESIZE) != 0 || guiInfo.hwndMoveSize != IntPtr.Zero;
+                    
+                    if (!isMoving)
+                    {
+                        // Not dragging/sizing -> fail gracefully (pass through right click)
+                        return false;
+                    }
+                }
+
                 // Break drag loop IMMEDIATELY on the hook thread
                 WindowManager.BreakDragLoop(target);
                 
