@@ -6,7 +6,13 @@ using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Collections.Generic;
 
-namespace TheGriddler;
+using System.Collections.Generic;
+
+using TheGriddler.Models;
+using TheGriddler.Core;
+using TheGriddler.Helpers;
+
+namespace TheGriddler.Views;
 
 public partial class GridOverlay : Window
 {

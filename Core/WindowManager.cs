@@ -2,7 +2,7 @@ using System;
 using System.Runtime.InteropServices;
 using System.Drawing;
 
-namespace TheGriddler;
+namespace TheGriddler.Core;
 
 public class WindowManager
 {

@@ -1,6 +1,12 @@
 using System.Windows;
 using System.Runtime.InteropServices;
 
+
+
+using TheGriddler.Core;
+using TheGriddler.Views;
+using TheGriddler.Models;
+
 namespace TheGriddler;
 
 /// <summary>

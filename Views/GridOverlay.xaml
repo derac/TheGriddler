@@ -1,13 +1,15 @@
-<Window x:Class="TheGriddler.GridOverlay"
+<Window x:Class="TheGriddler.Views.GridOverlay"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:local="clr-namespace:TheGriddler"
+        xmlns:local="clr-namespace:TheGriddler.Views"
+        xmlns:converters="clr-namespace:TheGriddler.Converters"
+        xmlns:models="clr-namespace:TheGriddler.Models"
         Title="GridOverlay" Height="450" Width="800"
         WindowStyle="None" AllowsTransparency="True" Background="Transparent"
         Topmost="True" ShowInTaskbar="False" WindowStartupLocation="Manual"
         Loaded="Window_Loaded">
     <Window.Resources>
-        <local:HexToBrushConverter x:Key="HexToBrushConverter" />
+        <converters:HexToBrushConverter x:Key="HexToBrushConverter" />
     </Window.Resources>
     <Grid Name="MainGrid">
         <ItemsControl Name="GridItems">
@@ -18,7 +20,7 @@
             </ItemsControl.ItemsPanel>
             <ItemsControl.ItemTemplate>
                 <DataTemplate>
-                    <Border BorderBrush="{Binding GridColor, Source={x:Static local:Settings.Instance}, Converter={StaticResource HexToBrushConverter}}" BorderThickness="0.5">
+                    <Border BorderBrush="{Binding GridColor, Source={x:Static models:Settings.Instance}, Converter={StaticResource HexToBrushConverter}}" BorderThickness="0.5">
                         <Grid Background="Transparent" />
                     </Border>
                 </DataTemplate>
@@ -26,8 +28,8 @@
         </ItemsControl>
         
         <Border Name="SelectionRect" 
-                Background="{Binding SelectionColor, Source={x:Static local:Settings.Instance}, Converter={StaticResource HexToBrushConverter}}" 
-                BorderBrush="{Binding SelectionBorderColor, Source={x:Static local:Settings.Instance}, Converter={StaticResource HexToBrushConverter}}" 
+                Background="{Binding SelectionColor, Source={x:Static models:Settings.Instance}, Converter={StaticResource HexToBrushConverter}}" 
+                BorderBrush="{Binding SelectionBorderColor, Source={x:Static models:Settings.Instance}, Converter={StaticResource HexToBrushConverter}}" 
                 BorderThickness="2" HorizontalAlignment="Left" VerticalAlignment="Top" Visibility="Collapsed" IsHitTestVisible="False" />
     </Grid>
 </Window>

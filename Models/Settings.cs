@@ -6,7 +6,9 @@ using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Diagnostics;
 
-namespace TheGriddler;
+using TheGriddler.Core;
+
+namespace TheGriddler.Models;
 
 public class MonitorConfig : INotifyPropertyChanged
 {

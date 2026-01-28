@@ -2,7 +2,7 @@ using System;
 using System.Drawing;
 using System.Runtime.InteropServices;
 
-namespace TheGriddler;
+namespace TheGriddler.Core;
 
 public static class NativeMethods
 {

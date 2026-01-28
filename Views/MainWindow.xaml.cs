@@ -9,7 +9,12 @@ using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
 
-namespace TheGriddler;
+
+
+using TheGriddler.Models;
+using TheGriddler.Core;
+
+namespace TheGriddler.Views;
 
 /// <summary>
 /// Interaction logic for MainWindow.xaml

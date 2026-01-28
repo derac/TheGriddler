@@ -1,7 +1,7 @@
 using System;
 using System.IO;
 
-namespace TheGriddler;
+namespace TheGriddler.Core;
 
 public static class Logger
 {

@@ -1,7 +1,7 @@
 using System.Windows;
 using System.Windows.Media;
 
-namespace TheGriddler;
+namespace TheGriddler.Helpers;
 
 public static class UiHelpers
 {
