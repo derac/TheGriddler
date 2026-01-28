@@ -17,7 +17,7 @@ namespace TheGriddler
     public class MonitorConfig : INotifyPropertyChanged
     {
         private int _rows = 2;
-        private int _columns = 3;
+        private int _columns = 2;
 
         public string DeviceName { get; set; } = "";
 
@@ -30,7 +30,7 @@ namespace TheGriddler
                 {
                     _rows = value;
                     OnPropertyChanged();
-                    Settings.Instance?.Save();
+                    if (!Settings.IsLoading) Settings.Instance?.Save();
                 }
             }
         }
@@ -44,7 +44,7 @@ namespace TheGriddler
                 {
                     _columns = value;
                     OnPropertyChanged();
-                    Settings.Instance?.Save();
+                    if (!Settings.IsLoading) Settings.Instance?.Save();
                 }
             }
         }
@@ -58,9 +58,24 @@ namespace TheGriddler
 
     public class Settings : INotifyPropertyChanged
     {
-        public static Settings? Instance { get; private set; }
+        private static Settings? _instance;
+        public static Settings Instance => _instance ??= Load();
+
+        public static bool IsLoading { get; private set; }
 
         public List<MonitorConfig> MonitorConfigs { get; set; } = new List<MonitorConfig>();
+
+        public MonitorConfig GetOrCreateMonitorConfig(string deviceName)
+        {
+            var config = MonitorConfigs.Find(m => m.DeviceName == deviceName);
+            if (config == null)
+            {
+                config = new MonitorConfig { DeviceName = deviceName };
+                MonitorConfigs.Add(config);
+                Save();
+            }
+            return config;
+        }
 
         public List<Binding> Bindings { get; set; } = new List<Binding>
         {
@@ -81,7 +96,7 @@ namespace TheGriddler
                     _runOnStartup = value;
                     OnPropertyChanged();
                     SetStartup(value);
-                    Save();
+                    if (!IsLoading) Save();
                 }
             }
         }
@@ -97,40 +112,51 @@ namespace TheGriddler
             "TheGriddler.lnk"
         );
 
+        // Constructor must be public for System.Text.Json deserialization
         public Settings()
         {
             _runOnStartup = File.Exists(StartupPath);
-            Instance = this;
         }
 
         public static Settings Load()
         {
-            Settings settings;
-            if (File.Exists(SettingsPath))
+            if (IsLoading) return _instance ?? new Settings();
+            IsLoading = true;
+            try
             {
-                try
+                if (File.Exists(SettingsPath))
                 {
-                    string json = File.ReadAllText(SettingsPath);
-                    settings = JsonSerializer.Deserialize<Settings>(json) ?? new Settings();
+                    try
+                    {
+                        string json = File.ReadAllText(SettingsPath);
+                        _instance = JsonSerializer.Deserialize<Settings>(json);
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.Log($"Error deserializing settings: {ex.Message}");
+                        _instance = null;
+                    }
                 }
-                catch
+                
+                if (_instance == null)
                 {
-                    settings = new Settings();
+                    _instance = new Settings();
+                    _instance.Save(); // Save defaults if no file exists
                 }
+                
+                _instance._runOnStartup = File.Exists(StartupPath);
+                return _instance;
             }
-            else
+            finally
             {
-                settings = new Settings();
+                IsLoading = false;
             }
-            
-            Instance = settings;
-            // Re-check startup status directly from file system to ensure accuracy
-            settings._runOnStartup = File.Exists(StartupPath);
-            return settings;
         }
 
         public void Save()
         {
+            if (IsLoading) return;
+
             try
             {
                 string? directory = Path.GetDirectoryName(SettingsPath);
@@ -140,10 +166,11 @@ namespace TheGriddler
                 }
                 string json = JsonSerializer.Serialize(this, new JsonSerializerOptions { WriteIndented = true });
                 File.WriteAllText(SettingsPath, json);
+                Logger.Log($"Settings saved to {SettingsPath}");
             }
-            catch
+            catch (Exception ex)
             {
-                // Log error or ignore
+                Logger.Log($"Error saving settings: {ex.Message}");
             }
         }
 

@@ -16,7 +16,7 @@ namespace TheGriddler
 
         public MainController()
         {
-            _settings = Settings.Load();
+            _settings = Settings.Instance;
             _hook = new GlobalHook();
             
             _hook.LeftButtonDown += OnLeftButtonDown;
@@ -115,7 +115,6 @@ namespace TheGriddler
             // Offload the heavy work to ensure the Hook callback returns immediately
             await System.Windows.Application.Current.Dispatcher.InvokeAsync(async () =>
             {
-                _settings = Settings.Load();
                 var cursorPosition = System.Windows.Forms.Cursor.Position;
                 _targetHWnd = WindowManager.GetTargetWindow(new System.Drawing.Point(cursorPosition.X, cursorPosition.Y));
 

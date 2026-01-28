@@ -36,17 +36,9 @@ namespace TheGriddler
             _physicalBounds = screen.WorkingArea;
 
             // Resolve per-monitor dimensions
-            var monitorConfig = _settings.MonitorConfigs.Find(m => m.DeviceName == screen.DeviceName);
-            if (monitorConfig != null)
-            {
-                _rows = monitorConfig.Rows;
-                _columns = monitorConfig.Columns;
-            }
-            else
-            {
-                _rows = 2;
-                _columns = 3;
-            }
+            var monitorConfig = _settings.GetOrCreateMonitorConfig(screen.DeviceName);
+            _rows = monitorConfig.Rows;
+            _columns = monitorConfig.Columns;
 
             // 1. Set basic properties so the window exists and is associated with the right monitor.
             // WPF's Window.Left/Top are in SYSTEM DIUs (logical units relative to primary monitor).

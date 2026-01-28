@@ -21,21 +21,12 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
-        _settings = Settings.Load();
+        _settings = Settings.Instance;
         
         // Sync Monitors
         foreach (var screen in System.Windows.Forms.Screen.AllScreens)
         {
-            var existing = _settings.MonitorConfigs.Find(m => m.DeviceName == screen.DeviceName);
-            if (existing == null)
-            {
-                _settings.MonitorConfigs.Add(new MonitorConfig
-                {
-                    DeviceName = screen.DeviceName,
-                    Rows = 2,
-                    Columns = 2
-                });
-            }
+            _settings.GetOrCreateMonitorConfig(screen.DeviceName);
         }
 
         this.DataContext = _settings;
