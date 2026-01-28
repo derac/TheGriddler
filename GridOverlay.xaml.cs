@@ -1,0 +1,228 @@
+using System;
+using System.Windows;
+using System.Windows.Media;
+using System.Windows.Input;
+using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
+using System.Collections.Generic;
+
+namespace WindowGridRedux
+{
+    public partial class GridOverlay : Window
+    {
+        private Settings _settings;
+        private IntPtr _targetHWnd;
+        private System.Windows.Point? _startPos;
+        private System.Windows.Point? _endPos;
+        private System.Drawing.Rectangle _physicalBounds;
+        private WindowManager.WindowBorders _cachedBorders;
+
+        public bool IsSelecting => _startPos.HasValue;
+
+        public GridOverlay(Settings settings, IntPtr targetHWnd)
+        {
+            InitializeComponent();
+            _settings = settings;
+            _targetHWnd = targetHWnd;
+
+            // Cache the borders once at the start (window should be restored by now)
+            _cachedBorders = WindowManager.GetWindowBorders(_targetHWnd);
+
+            // Position and size the overlay
+            var cursorPosition = System.Windows.Forms.Cursor.Position;
+            var screen = System.Windows.Forms.Screen.FromPoint(cursorPosition);
+            _physicalBounds = screen.WorkingArea;
+
+            // 1. Set basic properties so the window exists and is associated with the right monitor.
+            // WPF's Window.Left/Top are in SYSTEM DIUs (logical units relative to primary monitor).
+            var primaryScreen = System.Windows.Forms.Screen.PrimaryScreen;
+            double systemScaleX = (primaryScreen?.Bounds.Width ?? 1.0) / System.Windows.SystemParameters.PrimaryScreenWidth;
+            double systemScaleY = (primaryScreen?.Bounds.Height ?? 1.0) / System.Windows.SystemParameters.PrimaryScreenHeight;
+
+            this.Left = _physicalBounds.Left / systemScaleX;
+            this.Top = _physicalBounds.Top / systemScaleY;
+            
+            // We'll set physical size via Win32 after Show() to be absolutely sure.
+            this.Width = 100; // Placeholder
+            this.Height = 100; // Placeholder
+
+            Logger.Log($"GridOverlay Logical Setup: Left={this.Left}, Top={this.Top} | Area={_physicalBounds} | SystemScale={systemScaleX:F2}");
+            
+            this.Loaded += (s, e) => {
+                var helper = new System.Windows.Interop.WindowInteropHelper(this);
+                // Position physically to the exact working area
+                WindowManager.SetWindowPos(helper.Handle, IntPtr.Zero, _physicalBounds.Left, _physicalBounds.Top, _physicalBounds.Width, _physicalBounds.Height, 0x0040 /* SWP_SHOWWINDOW */);
+                Logger.Log($"GridOverlay Physical Set: {_physicalBounds.Left},{_physicalBounds.Top} {_physicalBounds.Width}x{_physicalBounds.Height}");
+            };
+
+            SetupGrid();
+        }
+
+        private void SetupGrid()
+        {
+            var panel = (GridItems.ItemsPanel.LoadContent() as UniformGrid) ?? new UniformGrid();
+            panel.Columns = _settings.GridWidth;
+            panel.Rows = _settings.GridHeight;
+            
+            // Re-assigning the panel is tricky with LoadContent, but UniformGrid in XAML will pick up Columns/Rows
+            // We'll use a backing list for the ItemsControl
+            List<int> items = new List<int>();
+            for (int i = 0; i < _settings.GridWidth * _settings.GridHeight; i++)
+            {
+                items.Add(i);
+            }
+            GridItems.ItemsSource = items;
+        }
+
+        public void StartSelection(System.Windows.Point screenPos)
+        {
+            Logger.Log($"StartSelection physical screenPos: {screenPos}");
+            
+            // Use physical coordinates relative to the monitor bounds
+            CalculateGridPosition(screenPos, out int col, out int row);
+            
+            _startPos = new System.Windows.Point(col, row); // Store Grid Coordinates (Col, Row) purely
+            _endPos = _startPos;
+            
+            SelectionRect.Visibility = Visibility.Visible;
+            UpdateSelection();
+        }
+
+        public void UpdateMouse(System.Windows.Point screenPos)
+        {
+            CalculateGridPosition(screenPos, out int col, out int row);
+            _endPos = new System.Windows.Point(col, row);
+            UpdateSelection();
+        }
+
+        private void CalculateGridPosition(System.Windows.Point screenPos, out int col, out int row)
+        {
+            // Relative physical offset
+            double pX = screenPos.X - _physicalBounds.Left;
+            double pY = screenPos.Y - _physicalBounds.Top;
+
+            // Physical cell size
+            double pCellW = (double)_physicalBounds.Width / _settings.GridWidth;
+            double pCellH = (double)_physicalBounds.Height / _settings.GridHeight;
+
+            col = (int)(pX / pCellW);
+            row = (int)(pY / pCellH);
+
+            // Clamp
+            col = Math.Max(0, Math.Min(_settings.GridWidth - 1, col));
+            row = Math.Max(0, Math.Min(_settings.GridHeight - 1, row));
+        }
+
+        private void GridCell_MouseEnter(object sender, System.Windows.Input.MouseEventArgs e)
+        {
+            // Handled by UpdateMouse via MainController
+        }
+
+        private void GridCell_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            // No longer used for click-to-snap
+        }
+
+        private void UpdateSelection()
+        {
+            if (_startPos.HasValue && _endPos.HasValue)
+            {
+                // _startPos and _endPos now hold Grid Indices (Col, Row) directly!
+                int startCol = (int)_startPos.Value.X;
+                int startRow = (int)_startPos.Value.Y;
+                int endCol = (int)_endPos.Value.X;
+                int endRow = (int)_endPos.Value.Y;
+
+                // Visual Representation uses Logical Units (WPF)
+                double cellWidth = ActualWidth / _settings.GridWidth;
+                double cellHeight = ActualHeight / _settings.GridHeight;
+
+                int minCol = Math.Min(startCol, endCol);
+                int minRow = Math.Min(startRow, endRow);
+                int colSpan = Math.Abs(startCol - endCol) + 1;
+                int rowSpan = Math.Abs(startRow - endRow) + 1;
+
+                double x = minCol * cellWidth;
+                double y = minRow * cellHeight;
+                double width = colSpan * cellWidth;
+                double height = rowSpan * cellHeight;
+
+                SelectionRect.Margin = new Thickness(x, y, 0, 0);
+                SelectionRect.Width = width;
+                SelectionRect.Height = height;
+
+                // Snap (preview)
+                Snap(final: false);
+            }
+        }
+
+        private int _lastStartCol = -1, _lastStartRow = -1, _lastEndCol = -1, _lastEndRow = -1;
+
+        public void Snap(bool final = true)
+        {
+            if (!_startPos.HasValue || !_endPos.HasValue) return;
+
+            int startCol = (int)_startPos.Value.X;
+            int startRow = (int)_startPos.Value.Y;
+            int endCol = (int)_endPos.Value.X;
+            int endRow = (int)_endPos.Value.Y;
+
+            if (!final && startCol == _lastStartCol && startRow == _lastStartRow && endCol == _lastEndCol && endRow == _lastEndRow)
+                return;
+
+            _lastStartCol = startCol; _lastStartRow = startRow; _lastEndCol = endCol; _lastEndRow = endRow;
+
+            // Calculate target in PHYSICAL coordinates
+            int targetColStart = Math.Min(startCol, endCol);
+            int targetRowStart = Math.Min(startRow, endRow);
+            int colSpan = Math.Abs(startCol - endCol) + 1;
+            int rowSpan = Math.Abs(startRow - endRow) + 1;
+
+            double pCellW = (double)_physicalBounds.Width / _settings.GridWidth;
+            double pCellH = (double)_physicalBounds.Height / _settings.GridHeight;
+
+            int pX = (int)Math.Round(_physicalBounds.Left + (targetColStart * pCellW));
+            int pY = (int)Math.Round(_physicalBounds.Top + (targetRowStart * pCellH));
+            int pWidth = (int)Math.Round(colSpan * pCellW);
+            int pHeight = (int)Math.Round(rowSpan * pCellH);
+
+            Logger.Log($"Snap Physical Calc: Base={_physicalBounds.Left},{_physicalBounds.Top} | Cells={targetColStart},{targetRowStart} {colSpan}x{rowSpan} | Target={pX},{pY} {pWidth}x{pHeight}");
+
+            // Refresh borders every time we snap, as the window might have moved between monitors
+            // with different scaling factors during the drag.
+            var currentBorders = WindowManager.GetWindowBorders(_targetHWnd);
+
+            // Use the new Physical API which handles the specific DPI scaling logic internally
+            WindowManager.SetWindowBoundsPhysical(_targetHWnd, new System.Drawing.Rectangle(pX, pY, pWidth, pHeight), currentBorders);
+        }
+
+        private void Window_Loaded(object sender, RoutedEventArgs e)
+        {
+            SelectionRect.Visibility = Visibility.Collapsed;
+
+            // Find the UniformGrid in the visual tree
+            var panel = FindVisualChild<UniformGrid>(GridItems);
+            if (panel != null)
+            {
+                panel.Columns = _settings.GridWidth;
+                panel.Rows = _settings.GridHeight;
+            }
+        }
+
+        private T? FindVisualChild<T>(DependencyObject? obj) where T : DependencyObject
+        {
+            if (obj == null) return null;
+            for (int i = 0; i < VisualTreeHelper.GetChildrenCount(obj); i++)
+            {
+                DependencyObject child = VisualTreeHelper.GetChild(obj, i);
+                if (child is T t)
+                    return t;
+                
+                T? childOfChild = FindVisualChild<T>(child);
+                if (childOfChild != null)
+                    return childOfChild;
+            }
+            return null;
+        }
+    }
+}
