@@ -15,31 +15,34 @@ public partial class GridOverlay : Window
     private System.Windows.Point? _startPos;
     private System.Windows.Point? _endPos;
     private System.Drawing.Rectangle _physicalBounds;
-    private WindowManager.WindowBorders _cachedBorders;
     private int _rows;
     private int _columns;
 
     public bool IsSelecting => _startPos.HasValue;
 
-    public GridOverlay(Settings settings, IntPtr targetHWnd)
+    public GridOverlay(Settings settings, IntPtr targetHWnd, System.Drawing.Point startPoint)
     {
         InitializeComponent();
         _settings = settings;
         _targetHWnd = targetHWnd;
 
-        // Cache the borders once at the start (window should be restored by now)
-        _cachedBorders = WindowManager.GetWindowBorders(_targetHWnd);
 
-        // Position and size the overlay
-        var cursorPosition = System.Windows.Forms.Cursor.Position;
-        var screen = System.Windows.Forms.Screen.FromPoint(cursorPosition);
+        // Log all monitors for layout debugging
+        foreach (var s in System.Windows.Forms.Screen.AllScreens)
+        {
+            Logger.Log($"DEBUG: Monitor Detected: {s.DeviceName} '{(s.Primary ? "Primary" : "")}' Bounds={s.Bounds} WorkingArea={s.WorkingArea}");
+        }
+
+        // Position and size the overlay based on the point where the right-click happened
+        var screen = System.Windows.Forms.Screen.FromPoint(startPoint);
         _physicalBounds = screen.WorkingArea;
-
         // Resolve per-monitor dimensions
         string friendlyName = WindowManager.GetFriendlyMonitorName(screen.DeviceName);
         var monitorConfig = _settings.GetOrCreateMonitorConfig(screen.DeviceName, friendlyName);
         _rows = monitorConfig.Rows;
         _columns = monitorConfig.Columns;
+
+        Logger.Log($"DEBUG: GridOverlay active on screen: {screen.DeviceName} with _physicalBounds={_physicalBounds}, grid={_columns}x{_rows}");
 
         // 1. Set basic properties so the window exists and is associated with the right monitor.
         // WPF's Window.Left/Top usually are in SYSTEM DIUs, but user requests 1:1 mapping.
@@ -53,8 +56,9 @@ public partial class GridOverlay : Window
         this.Loaded += (s, e) => {
             var helper = new System.Windows.Interop.WindowInteropHelper(this);
             // Position physically to the exact working area
+            Logger.Log($"DEBUG: GridOverlay.Loaded physical set start: {helper.Handle:X} to {_physicalBounds}");
             WindowManager.SetWindowPos(helper.Handle, IntPtr.Zero, _physicalBounds.Left, _physicalBounds.Top, _physicalBounds.Width, _physicalBounds.Height, 0x0040 /* SWP_SHOWWINDOW */);
-            Logger.Log($"GridOverlay Physical Set: {_physicalBounds.Left},{_physicalBounds.Top} {_physicalBounds.Width}x{_physicalBounds.Height}");
+            Logger.Log($"DEBUG: GridOverlay Physical Set done: {_physicalBounds.Left},{_physicalBounds.Top} {_physicalBounds.Width}x{_physicalBounds.Height}");
         };
     }
 
@@ -81,18 +85,28 @@ public partial class GridOverlay : Window
 
     private void CalculateGridPosition(System.Windows.Point screenPos, out int col, out int row)
     {
+        // ALWAYS fetch the current screen for the point being calculated
+        var screen = System.Windows.Forms.Screen.FromPoint(new System.Drawing.Point((int)screenPos.X, (int)screenPos.Y));
+        var currentBounds = screen.WorkingArea;
+
         // Relative physical offset
-        double pX = screenPos.X - _physicalBounds.Left;
-        double pY = screenPos.Y - _physicalBounds.Top;
+        double relX = screenPos.X - currentBounds.Left;
+        double relY = screenPos.Y - currentBounds.Top;
+
+        // Clamp physical offsets to screen bounds 0..pWidth/pHeight
+        double pX = Math.Max(0, Math.Min(currentBounds.Width - 1, relX));
+        double pY = Math.Max(0, Math.Min(currentBounds.Height - 1, relY));
 
         // Physical cell size
-        double pCellW = (double)_physicalBounds.Width / _columns;
-        double pCellH = (double)_physicalBounds.Height / _rows;
+        double pCellW = (double)currentBounds.Width / _columns;
+        double pCellH = (double)currentBounds.Height / _rows;
 
         col = (int)(pX / pCellW);
         row = (int)(pY / pCellH);
 
-        // Clamp
+        Logger.Log($"DEBUG: CalculateGridPosition: screen={screen.DeviceName}, pos={screenPos}, bounds={currentBounds.Left},{currentBounds.Top}, clampedPRel={pX},{pY}, pCell={pCellW:F2}x{pCellH:F2}, rawColRow={col},{row}");
+
+        // Clamp indices just in case of floating point edge cases
         col = Math.Max(0, Math.Min(_columns - 1, col));
         row = Math.Max(0, Math.Min(_rows - 1, row));
     }
@@ -152,21 +166,26 @@ public partial class GridOverlay : Window
         int targetColEnd = targetColStart + (Math.Abs(startCol - endCol) + 1);
         int targetRowEnd = targetRowStart + (Math.Abs(startRow - endRow) + 1);
 
-        // Calculate boundaries in PHYSICAL coordinates
-        double pX_start = _physicalBounds.Left + (targetColStart * (double)_physicalBounds.Width / _columns);
-        double pX_end = _physicalBounds.Left + (targetColEnd * (double)_physicalBounds.Width / _columns);
-        double pY_start = _physicalBounds.Top + (targetRowStart * (double)_physicalBounds.Height / _rows);
-        double pY_end = _physicalBounds.Top + (targetRowEnd * (double)_physicalBounds.Height / _rows);
+        // Refresh physical bounds based on the current screen where the mouse is
+        var cursorPosition = System.Windows.Forms.Cursor.Position;
+        var screen = System.Windows.Forms.Screen.FromPoint(cursorPosition);
+        var currentPhysicalBounds = screen.WorkingArea;
+        
+        // Calculate boundaries in PHYSICAL coordinates relative to the monitor at snap time
+        double pX_start = currentPhysicalBounds.Left + (targetColStart * (double)currentPhysicalBounds.Width / _columns);
+        double pX_end = currentPhysicalBounds.Left + (targetColEnd * (double)currentPhysicalBounds.Width / _columns);
+        double pY_start = currentPhysicalBounds.Top + (targetRowStart * (double)currentPhysicalBounds.Height / _rows);
+        double pY_end = currentPhysicalBounds.Top + (targetRowEnd * (double)currentPhysicalBounds.Height / _rows);
 
         int pX = (int)Math.Round(pX_start);
         int pY = (int)Math.Round(pY_start);
         int pWidth = (int)Math.Round(pX_end) - pX;
         int pHeight = (int)Math.Round(pY_end) - pY;
 
-        Logger.Log($"Snap Physical Calc: Base={_physicalBounds.Left},{_physicalBounds.Top} | Cells={targetColStart},{targetRowStart} to {targetColEnd},{targetRowEnd} | Target={pX},{pY} {pWidth}x{pHeight}");
+        Logger.Log($"DEBUG: SnapAsync Calc (Dynamic): screen={screen.DeviceName}, pBounds={currentPhysicalBounds} | targetCells=({targetColStart},{targetRowStart}) to ({targetColEnd},{targetRowEnd}) | physicalStart=({pX_start:F2},{pY_start:F2}), physicalEnd=({pX_end:F2},{pY_end:F2}) | finalPBounds={pX},{pY} {pWidth}x{pHeight}");
 
-        // Use the physical API with fresh borders to ensure accuracy
-        WindowManager.SetWindowBounds(_targetHWnd, new System.Drawing.Rectangle(pX, pY, pWidth, pHeight), null, _settings.WindowMargin);
+        // Use the physical API to ensure accuracy
+        WindowManager.SetWindowBounds(_targetHWnd, new System.Drawing.Rectangle(pX, pY, pWidth, pHeight));
     }
 
     private void Window_Loaded(object sender, RoutedEventArgs e)

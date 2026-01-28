@@ -67,7 +67,7 @@ public class MainController : IDisposable
                 // This ensures the OS stops the drag before we return from the hook
                 WindowManager.BreakDragLoop(target);
                 
-                ActivateGrid(target);
+                ActivateGrid(target, cursorPosition);
                 return true;
             }
         }
@@ -110,7 +110,7 @@ public class MainController : IDisposable
         return false;
     }
 
-    private async void ActivateGrid(IntPtr target)
+    private async void ActivateGrid(IntPtr target, System.Drawing.Point startPoint)
     {
         try
         {
@@ -120,16 +120,14 @@ public class MainController : IDisposable
             // Offload the heavy work (WPF window creation) to ensure we don't block the UI thread too much
             await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
             {
-                var cursorPosition = System.Windows.Forms.Cursor.Position;
-                
                 // Ensure restored BEFORE showing overlay
                 WindowManager.EnsureRestored(_targetHWnd);
                 
-                _overlay = new GridOverlay(_settings, _targetHWnd);
+                _overlay = new GridOverlay(_settings, _targetHWnd, startPoint);
                 _overlay.Show();
                 
-                // Immediately start selection from the current cursor position
-                _overlay.StartSelection(new System.Windows.Point(cursorPosition.X, cursorPosition.Y));
+                // Immediately start selection from the captured cursor position
+                _overlay.StartSelection(new System.Windows.Point(startPoint.X, startPoint.Y));
             });
         }
         catch (Exception ex)

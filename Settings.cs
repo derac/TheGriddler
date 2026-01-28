@@ -111,20 +111,6 @@ public class Settings : INotifyPropertyChanged
         }
     }
 
-    private int _windowMargin = 4;
-    public int WindowMargin
-    {
-        get => _windowMargin;
-        set
-        {
-            if (_windowMargin != value)
-            {
-                _windowMargin = value;
-                OnPropertyChanged();
-                if (!IsLoading) Save();
-            }
-        }
-    }
 
     private bool _isDarkMode = true;
     public bool IsDarkMode
@@ -164,7 +150,6 @@ public class Settings : INotifyPropertyChanged
         GridColor = DefaultGridColor;
         SelectionColor = DefaultSelectionColor;
         SelectionBorderColor = DefaultSelectionBorderColor;
-        WindowMargin = 1;
     }
 
     private bool _runOnStartup;

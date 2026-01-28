@@ -159,87 +159,27 @@ namespace TheGriddler
         private const uint SWP_FRAMECHANGED = 0x0020;
         private const uint SWP_NOCOPYBITS = 0x0100;
 
-        public struct WindowBorders
-        {
-            public int OffsetX;
-            public int OffsetY;
-            public int OffsetWidth;
-            public int OffsetHeight;
-        }
+
 
         public static void EnsureRestored(IntPtr hWnd)
         {
             ShowWindow(hWnd, SW_RESTORE);
         }
 
-        public static WindowBorders GetWindowBorders(IntPtr hWnd)
-        {
-            if (hWnd == IntPtr.Zero) return new WindowBorders();
-
-            IntPtr oldContext = SetThreadDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
-            try
-            {
-                GetWindowRect(hWnd, out RECT windowRect);
-                int result = DwmGetWindowAttribute(hWnd, DWMWA_EXTENDED_FRAME_BOUNDS, out RECT frameRect, Marshal.SizeOf<RECT>());
-                
-                if (result != 0)
-                {
-                    Logger.Log($"DwmGetWindowAttribute failed for HWND {hWnd:X} with result {result}.");
-                    return new WindowBorders();
-                }
-
-                var borders = new WindowBorders
-                {
-                    OffsetX = frameRect.Left - windowRect.Left,
-                    OffsetY = frameRect.Top - windowRect.Top,
-                    OffsetWidth = windowRect.Width - frameRect.Width,
-                    OffsetHeight = windowRect.Height - frameRect.Height
-                };
-
-                Logger.Log($"GetWindowBorders {hWnd:X}: wRect={windowRect.Left},{windowRect.Top},{windowRect.Width}x{windowRect.Height} | fRect={frameRect.Left},{frameRect.Top},{frameRect.Width}x{frameRect.Height} | finalBorders: L_Off={borders.OffsetX}, T_Off={borders.OffsetY}, W_Off={borders.OffsetWidth}, H_Off={borders.OffsetHeight}");
-
-                return borders;
-            }
-            finally
-            {
-                if (oldContext != IntPtr.Zero) SetThreadDpiAwarenessContext(oldContext);
-            }
-        }
-
-        [DllImport("user32.dll")]
-        public static extern IntPtr SetThreadDpiAwarenessContext(IntPtr dpiContext);
-
-        public static readonly IntPtr DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2 = new IntPtr(-4);
-
-        public static void SetWindowBounds(IntPtr hWnd, Rectangle targetBounds, WindowBorders? cachedBorders = null, int margin = 0)
+        public static void SetWindowBounds(IntPtr hWnd, Rectangle targetBounds)
         {
             if (hWnd == IntPtr.Zero) return;
 
-            IntPtr oldContext = SetThreadDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
-            try
-            {
-                uint flags = SWP_NOZORDER | SWP_SHOWWINDOW | SWP_NOACTIVATE | SWP_FRAMECHANGED | SWP_NOCOPYBITS;
+            int winX = targetBounds.X;
+            int winY = targetBounds.Y;
+            int winW = targetBounds.Width;
+            int winH = targetBounds.Height;
 
-                WindowBorders borders = cachedBorders ?? GetWindowBorders(hWnd);
-                
-                // Apply margin: shrink the target rect (Left, Right, Bottom only)
-                int targetX = targetBounds.X + margin;
-                int targetY = targetBounds.Y; // No margin at top
-                int targetW = targetBounds.Width - (margin * 2);
-                int targetH = targetBounds.Height - margin; // Margin at bottom
+            uint flags = SWP_NOZORDER | SWP_SHOWWINDOW | SWP_NOACTIVATE | SWP_FRAMECHANGED | SWP_NOCOPYBITS;
 
-                // Direct mapping 1:1
-                int winX = targetX - borders.OffsetX;
-                int winY = targetY - borders.OffsetY;
-                int winW = targetW + borders.OffsetWidth;
-                int winH = targetH + borders.OffsetHeight;
+            Logger.Log($"DEBUG: SetWindowPos {hWnd:X}: target={targetBounds.X},{targetBounds.Y} {targetBounds.Width}x{targetBounds.Height} | result={winX},{winY} {winW}x{winH}");
 
-                SetWindowPos(hWnd, IntPtr.Zero, winX, winY, winW, winH, flags);
-            }
-            finally
-            {
-                if (oldContext != IntPtr.Zero) SetThreadDpiAwarenessContext(oldContext);
-            }
+            SetWindowPos(hWnd, IntPtr.Zero, winX, winY, winW, winH, flags);
         }
 
         // Maintaining the old method for backward compatibility if needed, but implementation is redirected or deprecated.
