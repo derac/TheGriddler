@@ -1,31 +1,24 @@
-# The Griddler 🧩
+# <img height="30" alt="icon" src="https://github.com/derac/TheGriddler/blob/master/Resources/icon.png" /> The Griddler
 
-The Griddler is a lightweight, powerful window management tool for Windows that allows you to snap windows to a customizable grid using your mouse. Inspired by WindowGrid, it provides a seamless way to organize your workspace with precision.
+The Griddler is a lightweight window management tool for Windows that allows you to snap windows to a configurable grid using your mouse. Inspired by WindowGrid.
 
-![Icon](Resources/icon.png)
+<img height="300" alt="usage example" src="https://github.com/user-attachments/assets/cf7fc31d-4ee2-42a8-8572-a8bf1a87d96c" />
+
+*Drag and drop window tiling*
+
+<img height="300" alt="settings" src="https://github.com/user-attachments/assets/c30fef9c-7be2-4627-8516-6276880706f9" />
+
+*Simple settings*
 
 ## 🚀 For Users
 
 ### How to Use
-1.  **Run the App**: Launch `TheGriddler.exe`. It will sit quietly in your system tray.
-2.  **Activate the Grid**:
-    *   Click and hold the **Left Mouse Button** on a window's title bar (start dragging).
-    *   While holding, **Right-Click** once to activate the grid overlay.
-3.  **Define the Area**:
-    *   The first right-click defines the starting corner of your grid selection.
-    *   Move your mouse to span the desired area.
-    *   **Right-Click again** or **Release Left-Click** to snap the window to the selected area.
-4.  **Configure Settings**:
-    *   Open the settings menu from the taskbar icon.
-    *   Adjust the number of rows and columns for each monitor independently.
-    *   Customize the colors of the grid lines and selection area.
-    *   Toggle between **Light** and **Dark** modes.
+1. Put the exe anywhere you want.
+1. Start it.
+1. While dragging a window by holding left click, right click in the grid section you want to resize from, continue dragging left click to the grid section you want to resize to and press right click again or let go of left click.
+1. Double click the quickbar icon to launch settings. <img height="70" alt="{692DF108-4142-40C0-B454-73C4C36FF198}" src="https://github.com/user-attachments/assets/74883d4c-4938-4b94-a821-2df64af839a7" />
+1. Settings will be saved in the folder you have the exe in and the program will link to that location if you select the option to start it at Windows startup.
 
-### Features
-- **Independent Monitor Grids**: Set different grid sizes for each of your displays.
-- **High DPI Support**: Works perfectly on multi-monitor setups with different scaling factors.
-- **Customizable Aesthetics**: Change colors and themes to match your desktop.
-- **Minimal Footprint**: Low memory and CPU usage.
 
 ---
 
