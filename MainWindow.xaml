@@ -70,7 +70,7 @@
                     <StackPanel Margin="5">
                         <TextBlock Text="The Griddler" FontWeight="Bold"/>
                         <TextBlock Text="Credits:" Margin="0,5,0,0" FontWeight="SemiBold"/>
-                        <TextBlock Text="Derek Olson"/>
+                        <TextBlock Text="derac"/>
                     </StackPanel>
                 </GroupBox>
             </StackPanel>
