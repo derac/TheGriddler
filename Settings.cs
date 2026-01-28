@@ -20,6 +20,9 @@ namespace TheGriddler
         private int _columns = 2;
 
         public string DeviceName { get; set; } = "";
+        public string FriendlyName { get; set; } = "";
+
+        public string DisplayName => string.IsNullOrEmpty(FriendlyName) ? DeviceName : FriendlyName;
 
         public int Rows
         {
@@ -65,13 +68,18 @@ namespace TheGriddler
 
         public List<MonitorConfig> MonitorConfigs { get; set; } = new List<MonitorConfig>();
 
-        public MonitorConfig GetOrCreateMonitorConfig(string deviceName)
+        public MonitorConfig GetOrCreateMonitorConfig(string deviceName, string friendlyName = "")
         {
             var config = MonitorConfigs.Find(m => m.DeviceName == deviceName);
             if (config == null)
             {
-                config = new MonitorConfig { DeviceName = deviceName };
+                config = new MonitorConfig { DeviceName = deviceName, FriendlyName = friendlyName };
                 MonitorConfigs.Add(config);
+                Save();
+            }
+            else if (!string.IsNullOrEmpty(friendlyName) && config.FriendlyName != friendlyName)
+            {
+                config.FriendlyName = friendlyName;
                 Save();
             }
             return config;

@@ -28,7 +28,7 @@
                                         <ColumnDefinition Width="Auto"/>
                                     </Grid.ColumnDefinitions>
                                     <StackPanel Grid.Column="0" VerticalAlignment="Center">
-                                        <TextBlock Text="{Binding DeviceName}" FontWeight="Bold" TextWrapping="Wrap"/>
+                                        <TextBlock Text="{Binding DisplayName}" FontWeight="Bold" TextWrapping="Wrap"/>
                                     </StackPanel>
                                     <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
                                         <TextBlock Text="Cols:" VerticalAlignment="Center" Margin="5,0"/>

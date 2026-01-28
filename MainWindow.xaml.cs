@@ -26,7 +26,8 @@ public partial class MainWindow : Window
         // Sync Monitors
         foreach (var screen in System.Windows.Forms.Screen.AllScreens)
         {
-            _settings.GetOrCreateMonitorConfig(screen.DeviceName);
+            string friendlyName = WindowManager.GetFriendlyMonitorName(screen.DeviceName);
+            _settings.GetOrCreateMonitorConfig(screen.DeviceName, friendlyName);
         }
 
         this.DataContext = _settings;

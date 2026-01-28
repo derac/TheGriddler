@@ -36,7 +36,8 @@ namespace TheGriddler
             _physicalBounds = screen.WorkingArea;
 
             // Resolve per-monitor dimensions
-            var monitorConfig = _settings.GetOrCreateMonitorConfig(screen.DeviceName);
+            string friendlyName = WindowManager.GetFriendlyMonitorName(screen.DeviceName);
+            var monitorConfig = _settings.GetOrCreateMonitorConfig(screen.DeviceName, friendlyName);
             _rows = monitorConfig.Rows;
             _columns = monitorConfig.Columns;
 

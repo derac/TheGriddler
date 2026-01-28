@@ -101,6 +101,53 @@ namespace TheGriddler
         [DllImport("user32.dll", SetLastError = true)]
         public static extern bool SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter, int X, int Y, int cx, int cy, uint uFlags);
 
+        [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Auto)]
+        public struct DISPLAY_DEVICE
+        {
+            [MarshalAs(UnmanagedType.U4)]
+            public int cb;
+            [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 32)]
+            public string DeviceName;
+            [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 128)]
+            public string DeviceString;
+            [MarshalAs(UnmanagedType.U4)]
+            public int StateFlags;
+            [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 128)]
+            public string DeviceID;
+            [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 128)]
+            public string DeviceKey;
+        }
+
+        [DllImport("user32.dll", CharSet = CharSet.Auto)]
+        public static extern bool EnumDisplayDevices(string? lpDevice, uint iDevNum, ref DISPLAY_DEVICE lpDisplayDevice, uint dwFlags);
+
+        public static string GetFriendlyMonitorName(string deviceName)
+        {
+            DISPLAY_DEVICE dd = new DISPLAY_DEVICE();
+            dd.cb = Marshal.SizeOf(dd);
+
+            // First call finds the adapter for the device name (e.g., \\.\DISPLAY1)
+            // But to get the monitor name, we need to call it again with that device name.
+            uint i = 0;
+            while (EnumDisplayDevices(null, i, ref dd, 0))
+            {
+                if (dd.DeviceName == deviceName)
+                {
+                    // Found the adapter, now get the monitor attached to it
+                    DISPLAY_DEVICE monitorDd = new DISPLAY_DEVICE();
+                    monitorDd.cb = Marshal.SizeOf(monitorDd);
+                    if (EnumDisplayDevices(dd.DeviceName, 0, ref monitorDd, 0))
+                    {
+                        return monitorDd.DeviceString;
+                    }
+                    break;
+                }
+                i++;
+            }
+
+            return deviceName; // Fallback
+        }
+
         private const uint SWP_NOZORDER = 0x0004;
         private const uint SWP_SHOWWINDOW = 0x0040;
         private const uint SWP_NOACTIVATE = 0x0010;
