@@ -6,7 +6,7 @@ The Griddler is a lightweight window management tool for Windows that allows you
 
 *Drag and drop window tiling*
 
-<img height="300" alt="settings" src="https://github.com/user-attachments/assets/c30fef9c-7be2-4627-8516-6276880706f9" />
+<img height="300" alt="settings" src="https://github.com/user-attachments/assets/12c3f9f6-a4e6-490e-aa4c-031dc3d9f60d" />
 
 *Simple settings*
 
