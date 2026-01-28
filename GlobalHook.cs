@@ -8,9 +8,6 @@ namespace TheGriddler
     public class GlobalHook : IDisposable
     {
         private const int WH_MOUSE_LL = 14;
-        private const int WH_KEYBOARD_LL = 13;
-        private const int WM_KEYDOWN = 0x0100;
-        private const int WM_KEYUP = 0x0101;
         private const int WM_MOUSEMOVE = 0x0200;
         private const int WM_LBUTTONDOWN = 0x0201;
         private const int WM_LBUTTONUP = 0x0202;
@@ -20,22 +17,16 @@ namespace TheGriddler
         private delegate IntPtr LowLevelProc(int nCode, IntPtr wParam, IntPtr lParam);
 
         private LowLevelProc _mouseProc;
-        private LowLevelProc _keyboardProc;
         private IntPtr _mouseHookId = IntPtr.Zero;
-        private IntPtr _keyboardHookId = IntPtr.Zero;
 
         public event Action<System.Drawing.Point>? MouseMoved;
         public event Action<bool>? LeftButtonDown;
         public event Func<bool, bool>? RightButtonDown;
-        public event Action<int>? KeyDown;
-        public event Action<int>? KeyUp;
 
         public GlobalHook()
         {
             _mouseProc = MouseHookCallback;
-            _keyboardProc = KeyboardHookCallback;
             _mouseHookId = SetHook(_mouseProc, WH_MOUSE_LL);
-            _keyboardHookId = SetHook(_keyboardProc, WH_KEYBOARD_LL);
         }
 
         private IntPtr SetHook(LowLevelProc proc, int id)
@@ -91,23 +82,10 @@ namespace TheGriddler
             }
             return CallNextHookEx(_mouseHookId, nCode, wParam, lParam);
         }
-          private IntPtr KeyboardHookCallback(int nCode, IntPtr wParam, IntPtr lParam)
-        {
-            if (nCode >= 0)
-            {
-                int vkCode = (int)Marshal.ReadInt32(lParam);
-                if (wParam == (IntPtr)WM_KEYDOWN)
-                    KeyDown?.Invoke(vkCode);
-                else if (wParam == (IntPtr)WM_KEYUP)
-                    KeyUp?.Invoke(vkCode);
-            }
-            return CallNextHookEx(_keyboardHookId, nCode, wParam, lParam);
-        }
 
         public void Dispose()
         {
             if (_mouseHookId != IntPtr.Zero) UnhookWindowsHookEx(_mouseHookId);
-            if (_keyboardHookId != IntPtr.Zero) UnhookWindowsHookEx(_keyboardHookId);
         }
 
         [StructLayout(LayoutKind.Sequential)]

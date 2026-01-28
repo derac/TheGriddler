@@ -21,8 +21,6 @@ namespace TheGriddler
             
             _hook.LeftButtonDown += OnLeftButtonDown;
             _hook.RightButtonDown += OnRightButtonDown;
-            _hook.KeyDown += OnKeyDown;
-            _hook.KeyUp += OnKeyUp;
             _hook.MouseMoved += OnMouseMoved;
         }
 
@@ -94,18 +92,6 @@ namespace TheGriddler
             return false;
         }
 
-        private void OnKeyDown(int vkCode)
-        {
-            // Map Space/LControl to Right-Click logic
-            if (vkCode == 32 || vkCode == 162)
-            {
-                HandleRightClick();
-            }
-        }
-
-        private void OnKeyUp(int vkCode)
-        {
-        }
 
 
         private async void ActivateGrid()

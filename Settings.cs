@@ -8,11 +8,6 @@ using System.Diagnostics;
 
 namespace TheGriddler
 {
-    public class Binding
-    {
-        public string Key { get; set; } = "";
-        public string Command { get; set; } = "";
-    }
 
     public class MonitorConfig : INotifyPropertyChanged
     {
@@ -85,13 +80,6 @@ namespace TheGriddler
             return config;
         }
 
-        public List<Binding> Bindings { get; set; } = new List<Binding>
-        {
-            new Binding { Key = "KEY_SPACE", Command = "Resize" },
-            new Binding { Key = "KEY_LCONTROL", Command = "Move" },
-            new Binding { Key = "MOUSE_RBUTTON", Command = "Resize" },
-            new Binding { Key = "MOUSE_MBUTTON", Command = "Move" }
-        };
 
         private bool _runOnStartup;
         public bool RunOnStartup
