@@ -32,21 +32,3 @@ public class HexToBrushConverter : IValueConverter
         return "#00000000";
     }
 }
-
-public class BoolToVisibilityConverter : IValueConverter
-{
-    public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
-    {
-        bool invert = parameter as string == "Invert";
-        if (value is bool b)
-        {
-            return (b ^ invert) ? System.Windows.Visibility.Visible : System.Windows.Visibility.Collapsed;
-        }
-        return System.Windows.Visibility.Visible;
-    }
-
-    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
-    {
-        throw new NotImplementedException();
-    }
-}

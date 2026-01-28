@@ -68,17 +68,11 @@ public partial class App : System.Windows.Application
         {
             if (a.Button == System.Windows.Forms.MouseButtons.Right && _dummyForm != null)
             {
-                SetForegroundWindow(_dummyForm.Handle);
+                NativeMethods.SetForegroundWindow(_dummyForm.Handle);
                 contextMenu.Show(System.Windows.Forms.Cursor.Position);
             }
         };
     }
-
-    [DllImport("user32.dll")]
-    static extern bool SetForegroundWindow(IntPtr hWnd);
-
-    [DllImport("user32.dll", CharSet = CharSet.Auto)]
-    extern static bool DestroyIcon(IntPtr handle);
 
     private void ShowSettings()
     {
@@ -103,7 +97,7 @@ public partial class App : System.Windows.Application
         {
             IntPtr handle = _currentIcon.Handle;
             _currentIcon.Dispose();
-            DestroyIcon(handle);
+            NativeMethods.DestroyIcon(handle);
         }
         _dummyForm?.Dispose();
         _controller?.Dispose();

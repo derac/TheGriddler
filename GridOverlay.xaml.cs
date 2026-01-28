@@ -57,7 +57,8 @@ public partial class GridOverlay : Window
             var helper = new System.Windows.Interop.WindowInteropHelper(this);
             // Position physically to the exact working area
             Logger.Log($"DEBUG: GridOverlay.Loaded physical set start: {helper.Handle:X} to {_physicalBounds}");
-            WindowManager.SetWindowPos(helper.Handle, IntPtr.Zero, _physicalBounds.Left, _physicalBounds.Top, _physicalBounds.Width, _physicalBounds.Height, 0x0040 /* SWP_SHOWWINDOW */);
+            WindowManager.EnsureRestored(helper.Handle); // Good practice to ensure it's not minimized
+            NativeMethods.SetWindowPos(helper.Handle, IntPtr.Zero, _physicalBounds.Left, _physicalBounds.Top, _physicalBounds.Width, _physicalBounds.Height, NativeMethods.SWP_SHOWWINDOW);
             Logger.Log($"DEBUG: GridOverlay Physical Set done: {_physicalBounds.Left},{_physicalBounds.Top} {_physicalBounds.Width}x{_physicalBounds.Height}");
         };
     }
@@ -184,7 +185,7 @@ public partial class GridOverlay : Window
         SelectionRect.Visibility = Visibility.Collapsed;
 
         // Find the UniformGrid in the visual tree and configure it
-        if (FindVisualChild<UniformGrid>(GridItems) is UniformGrid panel)
+        if (UiHelpers.FindVisualChild<UniformGrid>(GridItems) is UniformGrid panel)
         {
             panel.Columns = _columns;
             panel.Rows = _rows;
@@ -194,20 +195,5 @@ public partial class GridOverlay : Window
             for (int i = 0; i < _columns * _rows; i++) items.Add(i);
             GridItems.ItemsSource = items;
         }
-    }
-
-    private T? FindVisualChild<T>(DependencyObject? obj) where T : DependencyObject
-    {
-        if (obj == null) return null;
-        for (int i = 0; i < VisualTreeHelper.GetChildrenCount(obj); i++)
-        {
-            DependencyObject child = VisualTreeHelper.GetChild(obj, i);
-            if (child is T t)
-                return t;
-            
-            if (FindVisualChild<T>(child) is T childOfChild)
-                return childOfChild;
-        }
-        return null;
     }
 }

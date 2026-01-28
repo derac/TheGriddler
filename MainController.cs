@@ -20,16 +20,12 @@ public class MainController : IDisposable
         _hook = new GlobalHook();
         
         // Initialize state to avoid missing the first drag if app started while button was down
-        _isLButtonDown = (GetAsyncKeyState(VK_LBUTTON) & 0x8000) != 0;
+        _isLButtonDown = (NativeMethods.GetAsyncKeyState(NativeMethods.VK_LBUTTON) & 0x8000) != 0;
 
         _hook.LeftButtonDown += OnLeftButtonDown;
         _hook.RightButtonDown += OnRightButtonDown;
         _hook.MouseMoved += OnMouseMoved;
     }
-
-    [System.Runtime.InteropServices.DllImport("user32.dll")]
-    private static extern short GetAsyncKeyState(int vKey);
-    private const int VK_LBUTTON = 0x01;
 
     private void OnMouseMoved(System.Drawing.Point pos)
     {
@@ -57,7 +53,7 @@ public class MainController : IDisposable
     private bool HandleRightClick()
     {
         // Re-check left button state using GetAsyncKeyState to be absolutely sure we aren't out of sync
-        bool physicalLButtonDown = (GetAsyncKeyState(VK_LBUTTON) & 0x8000) != 0;
+        bool physicalLButtonDown = (NativeMethods.GetAsyncKeyState(NativeMethods.VK_LBUTTON) & 0x8000) != 0;
         if (_isLButtonDown != physicalLButtonDown)
         {
             _isLButtonDown = physicalLButtonDown;
