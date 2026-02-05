@@ -55,10 +55,14 @@ public class MainController : IDisposable
 
     private bool HandleRightClick()
     {
+        var sw = System.Diagnostics.Stopwatch.StartNew();
+        Logger.Log($"HandleRightClick: START");
+        
         // Re-check left button state using GetAsyncKeyState to be absolutely sure we aren't out of sync
         bool physicalLButtonDown = (NativeMethods.GetAsyncKeyState(NativeMethods.VK_LBUTTON) & 0x8000) != 0;
         if (_isLButtonDown != physicalLButtonDown)
         {
+            Logger.Log($"HandleRightClick: LButton state corrected from {_isLButtonDown} to {physicalLButtonDown}");
             _isLButtonDown = physicalLButtonDown;
         }
 
@@ -66,6 +70,7 @@ public class MainController : IDisposable
         {
             var cursorPosition = System.Windows.Forms.Cursor.Position;
             IntPtr target = WindowManager.GetTargetWindow(new System.Drawing.Point(cursorPosition.X, cursorPosition.Y));
+            Logger.Log($"HandleRightClick: GetTargetWindow returned {target:X} at {sw.ElapsedMilliseconds}ms");
             
             if (target != IntPtr.Zero)
             {
@@ -80,18 +85,41 @@ public class MainController : IDisposable
                 {
                     // Check if flags indicate move/size OR if hwndMoveSize is set (either/or check is robust)
                     bool isMoving = (guiInfo.flags & NativeMethods.GUI_INMOVESIZE) != 0 || guiInfo.hwndMoveSize != IntPtr.Zero;
+                    Logger.Log($"HandleRightClick: GUI_INMOVESIZE check - flags=0x{guiInfo.flags:X}, hwndMoveSize={guiInfo.hwndMoveSize:X}, hwndCapture={guiInfo.hwndCapture:X}, isMoving={isMoving} at {sw.ElapsedMilliseconds}ms");
                     
                     if (!isMoving)
                     {
                         // Not dragging/sizing -> fail gracefully (pass through right click)
+                        Logger.Log($"HandleRightClick: Window not in move/size mode, passing through");
                         return false;
                     }
                 }
+                else
+                {
+                    Logger.Log($"HandleRightClick: GetGUIThreadInfo FAILED for threadId={threadId}");
+                }
 
                 // Break drag loop IMMEDIATELY on the hook thread
+                Logger.Log($"HandleRightClick: Calling BreakDragLoop at {sw.ElapsedMilliseconds}ms");
                 WindowManager.BreakDragLoop(target);
+                Logger.Log($"HandleRightClick: BreakDragLoop completed at {sw.ElapsedMilliseconds}ms");
                 
+                // Verify the drag was actually broken
+                NativeMethods.GUITHREADINFO postBreakInfo = new NativeMethods.GUITHREADINFO();
+                postBreakInfo.cbSize = System.Runtime.InteropServices.Marshal.SizeOf(postBreakInfo);
+                if (NativeMethods.GetGUIThreadInfo(threadId, ref postBreakInfo))
+                {
+                    bool stillMoving = (postBreakInfo.flags & NativeMethods.GUI_INMOVESIZE) != 0 || postBreakInfo.hwndMoveSize != IntPtr.Zero;
+                    Logger.Log($"HandleRightClick: POST-BREAK check - flags=0x{postBreakInfo.flags:X}, hwndMoveSize={postBreakInfo.hwndMoveSize:X}, stillMoving={stillMoving}");
+                    if (stillMoving)
+                    {
+                        Logger.Log($"HandleRightClick: WARNING - BreakDragLoop did NOT cancel the native drag!");
+                    }
+                }
+                
+                Logger.Log($"HandleRightClick: Calling ActivateGrid at {sw.ElapsedMilliseconds}ms");
                 ActivateGrid(target, cursorPosition);
+                Logger.Log($"HandleRightClick: ActivateGrid call returned at {sw.ElapsedMilliseconds}ms (async work continues)");
                 // We are now technically "dragging" (activating). 
                 // Any following right-clicks should be blocked too.
                 return true;

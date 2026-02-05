@@ -8,6 +8,8 @@ public class WindowManager
 {
     public static string GetFriendlyMonitorName(string deviceName)
     {
+        var sw = System.Diagnostics.Stopwatch.StartNew();
+        
         NativeMethods.DISPLAY_DEVICE dd = new NativeMethods.DISPLAY_DEVICE();
         dd.cb = Marshal.SizeOf(dd);
 
@@ -20,6 +22,7 @@ public class WindowManager
                 monitorDd.cb = Marshal.SizeOf(monitorDd);
                 if (NativeMethods.EnumDisplayDevices(dd.DeviceName, 0, ref monitorDd, 0))
                 {
+                    Logger.Log($"GetFriendlyMonitorName: Found '{monitorDd.DeviceString}' for {deviceName} in {sw.ElapsedMilliseconds}ms (iterations={i})");
                     return monitorDd.DeviceString;
                 }
                 break;
@@ -27,6 +30,7 @@ public class WindowManager
             i++;
         }
 
+        Logger.Log($"GetFriendlyMonitorName: No match for {deviceName} in {sw.ElapsedMilliseconds}ms (iterations={i})");
         return deviceName;
     }
 
@@ -83,12 +87,17 @@ public class WindowManager
 
     public static void BreakDragLoop(IntPtr hWnd)
     {
-        // Force the window to cancel any internal modes (sizing/moving)
-        NativeMethods.SendMessage(hWnd, NativeMethods.WM_CANCELMODE, IntPtr.Zero, IntPtr.Zero);
-        // Simulate a mouse up to be sure
-        NativeMethods.SendMessage(hWnd, NativeMethods.WM_LBUTTONUP, IntPtr.Zero, IntPtr.Zero);
+        Logger.Log($"BreakDragLoop: START for hWnd={hWnd:X}");
         
-        NativeMethods.ReleaseCapture();
+        // Force the window to cancel any internal modes (sizing/moving)
+        IntPtr cancelResult = NativeMethods.SendMessage(hWnd, NativeMethods.WM_CANCELMODE, IntPtr.Zero, IntPtr.Zero);
+        Logger.Log($"BreakDragLoop: WM_CANCELMODE result={cancelResult}");
+        
+        // Simulate a mouse up to be sure
+        IntPtr lbUpResult = NativeMethods.SendMessage(hWnd, NativeMethods.WM_LBUTTONUP, IntPtr.Zero, IntPtr.Zero);
+        Logger.Log($"BreakDragLoop: WM_LBUTTONUP result={lbUpResult}");
+        
+        bool releaseResult = NativeMethods.ReleaseCapture();
+        Logger.Log($"BreakDragLoop: ReleaseCapture result={releaseResult}");
     }
 }
-

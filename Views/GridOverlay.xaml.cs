@@ -28,7 +28,12 @@ public partial class GridOverlay : Window
 
     public GridOverlay(Settings settings, IntPtr targetHWnd, System.Drawing.Point startPoint)
     {
+        var sw = System.Diagnostics.Stopwatch.StartNew();
+        Logger.Log($"GridOverlay: Constructor START");
+        
         InitializeComponent();
+        Logger.Log($"GridOverlay: InitializeComponent done at {sw.ElapsedMilliseconds}ms");
+        
         _settings = settings;
         _targetHWnd = targetHWnd;
 
@@ -38,13 +43,21 @@ public partial class GridOverlay : Window
         {
             Logger.Log($"DEBUG: Monitor Detected: {s.DeviceName} '{(s.Primary ? "Primary" : "")}' Bounds={s.Bounds} WorkingArea={s.WorkingArea}");
         }
+        Logger.Log($"GridOverlay: Screen enumeration done at {sw.ElapsedMilliseconds}ms");
 
         // Position and size the overlay based on the point where the right-click happened
         var screen = System.Windows.Forms.Screen.FromPoint(startPoint);
         _physicalBounds = screen.WorkingArea;
+        
         // Resolve per-monitor dimensions
+        Logger.Log($"GridOverlay: Calling GetFriendlyMonitorName at {sw.ElapsedMilliseconds}ms");
         string friendlyName = WindowManager.GetFriendlyMonitorName(screen.DeviceName);
+        Logger.Log($"GridOverlay: GetFriendlyMonitorName returned at {sw.ElapsedMilliseconds}ms");
+        
+        Logger.Log($"GridOverlay: Calling GetOrCreateMonitorConfig at {sw.ElapsedMilliseconds}ms");
         var monitorConfig = _settings.GetOrCreateMonitorConfig(screen.DeviceName, friendlyName);
+        Logger.Log($"GridOverlay: GetOrCreateMonitorConfig returned at {sw.ElapsedMilliseconds}ms");
+        
         _rows = monitorConfig.Rows;
         _columns = monitorConfig.Columns;
 
@@ -58,6 +71,7 @@ public partial class GridOverlay : Window
         this.Height = _physicalBounds.Height;
 
         Logger.Log($"GridOverlay Logical Setup: Left={this.Left}, Top={this.Top} | Area={_physicalBounds}");
+        Logger.Log($"GridOverlay: Constructor END at {sw.ElapsedMilliseconds}ms total");
         
         this.Loaded += (s, e) => {
             var helper = new System.Windows.Interop.WindowInteropHelper(this);
