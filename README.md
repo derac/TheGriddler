@@ -13,11 +13,12 @@ The Griddler is a lightweight window management tool for Windows that allows you
 ## 🚀 For Users
 
 ### How to Use
-1. Put the exe anywhere you want.
-1. Start it.
+1. Put the [exe](https://github.com/derac/TheGriddler/releases/download/v1.0.0/TheGriddler.exe) anywhere you want.
+1. Double click to run it.
 1. While dragging a window by holding left click, right click in the grid section you want to resize from, continue dragging left click to the grid section you want to resize to and press right click again or let go of left click.
 1. Double click the quickbar icon to launch settings. <img height="70" alt="{692DF108-4142-40C0-B454-73C4C36FF198}" src="https://github.com/user-attachments/assets/74883d4c-4938-4b94-a821-2df64af839a7" />
-1. Settings will be saved in the folder you have the exe in and the program will link to that location if you select the option to start it at Windows startup.
+1. Settings will be saved in your `%appdata%` folder.
+1. If you select the option to run at startup, it will make an entry in `shell:startup` (you can go there in file explorer).
 
 
 ---
