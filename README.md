@@ -38,6 +38,10 @@ The Griddler is a lightweight window management tool for Windows that allows you
     dotnet build
     dotnet run
     ```
+4.  To build a production executable to the `publish` folder:
+    ```bash
+    dotnet publish -c Release -o publish --self-contained true /p:PublishSingleFile=true /p:IncludeAllContentForSelfExtract=true
+    ```
 
 ### Project Structure
 - `MainController.cs`: The core engine that handles global input hooks and coordinates window snapping logic.
