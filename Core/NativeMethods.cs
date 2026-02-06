@@ -135,4 +135,25 @@ public static class NativeMethods
     public const int GUI_INMOVESIZE = 0x00000002;
 
     public const int VK_LBUTTON = 0x01;
+
+    // DPI-related APIs for cross-monitor compensation
+    [DllImport("user32.dll")]
+    public static extern uint GetDpiForWindow(IntPtr hWnd);
+
+    [DllImport("shcore.dll")]
+    public static extern int GetDpiForMonitor(IntPtr hMonitor, int dpiType, out uint dpiX, out uint dpiY);
+
+    public const int MDT_EFFECTIVE_DPI = 0;
+
+    // DPI awareness context APIs - to check if window is per-monitor aware
+    [DllImport("user32.dll")]
+    public static extern IntPtr GetWindowDpiAwarenessContext(IntPtr hWnd);
+
+    [DllImport("user32.dll")]
+    public static extern int GetAwarenessFromDpiAwarenessContext(IntPtr dpiContext);
+
+    // DPI_AWARENESS values
+    public const int DPI_AWARENESS_UNAWARE = 0;
+    public const int DPI_AWARENESS_SYSTEM_AWARE = 1;
+    public const int DPI_AWARENESS_PER_MONITOR_AWARE = 2;
 }

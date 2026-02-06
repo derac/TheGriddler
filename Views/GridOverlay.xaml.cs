@@ -183,7 +183,7 @@ public partial class GridOverlay : Window
         int targetColEnd = targetColStart + (Math.Abs(startCol - endCol) + 1);
         int targetRowEnd = targetRowStart + (Math.Abs(startRow - endRow) + 1);
 
-        // Calculate boundaries in PHYSICAL coordinates relative to the initial monitor
+        // Calculate boundaries in PHYSICAL coordinates relative to the overlay's monitor
         double pX_start = _physicalBounds.Left + (targetColStart * (double)_physicalBounds.Width / _columns);
         double pX_end = _physicalBounds.Left + (targetColEnd * (double)_physicalBounds.Width / _columns);
         double pY_start = _physicalBounds.Top + (targetRowStart * (double)_physicalBounds.Height / _rows);
@@ -194,7 +194,36 @@ public partial class GridOverlay : Window
         int pWidth = (int)Math.Round(pX_end) - pX;
         int pHeight = (int)Math.Round(pY_end) - pY;
 
-        Logger.Log($"DEBUG: SnapAsync Calc (Clamped): pBounds={_physicalBounds} | targetCells=({targetColStart},{targetRowStart}) to ({targetColEnd},{targetRowEnd}) | physicalStart=({pX_start:F2},{pY_start:F2}), physicalEnd=({pX_end:F2},{pY_end:F2}) | finalPBounds={pX},{pY} {pWidth}x{pHeight}");
+        // Get the window's current DPI context (what it's currently using)
+        uint windowDpi = NativeMethods.GetDpiForWindow(_targetHWnd);
+        
+        // Get the destination monitor's DPI
+        IntPtr destMonitor = NativeMethods.MonitorFromPoint(
+            new System.Drawing.Point(_physicalBounds.Left + _physicalBounds.Width / 2, _physicalBounds.Top + _physicalBounds.Height / 2),
+            NativeMethods.MONITOR_DEFAULTTONEAREST);
+        NativeMethods.GetDpiForMonitor(destMonitor, NativeMethods.MDT_EFFECTIVE_DPI, out uint destDpiX, out uint destDpiY);
+
+        // Check if the window is Per-Monitor DPI aware
+        // For System DPI Aware or DPI Unaware apps (like Notepad++), Windows virtualizes the coordinates
+        // and handles scaling automatically - we should NOT apply compensation for those
+        IntPtr dpiContext = NativeMethods.GetWindowDpiAwarenessContext(_targetHWnd);
+        int dpiAwareness = NativeMethods.GetAwarenessFromDpiAwarenessContext(dpiContext);
+        bool isPerMonitorAware = (dpiAwareness == NativeMethods.DPI_AWARENESS_PER_MONITOR_AWARE);
+
+        Logger.Log($"DEBUG: SnapAsync DPI - windowDpi={windowDpi}, destDpi={destDpiX}, dpiAwareness={dpiAwareness}, isPerMonitorAware={isPerMonitorAware}");
+
+        // Only apply DPI compensation for Per-Monitor Aware apps
+        // SetWindowPos interprets coordinates in the window's current DPI context
+        // So if window is at 150% (144 DPI) and destination is 100% (96 DPI), we must scale UP the size
+        if (isPerMonitorAware && windowDpi > 0 && destDpiX > 0 && windowDpi != destDpiX)
+        {
+            double dpiRatio = (double)windowDpi / destDpiX;
+            pWidth = (int)Math.Round(pWidth * dpiRatio);
+            pHeight = (int)Math.Round(pHeight * dpiRatio);
+            Logger.Log($"DEBUG: SnapAsync DPI compensation applied - dpiRatio={dpiRatio:F3}, adjustedSize={pWidth}x{pHeight}");
+        }
+
+        Logger.Log($"DEBUG: SnapAsync Calc: pBounds={_physicalBounds} | targetCells=({targetColStart},{targetRowStart}) to ({targetColEnd},{targetRowEnd}) | finalPBounds={pX},{pY} {pWidth}x{pHeight}");
 
         // Use the physical API to ensure accuracy
         WindowManager.SetWindowBounds(_targetHWnd, new System.Drawing.Rectangle(pX, pY, pWidth, pHeight));
